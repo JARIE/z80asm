@@ -35,6 +35,7 @@
              field to zero.
 */
 
+#define NA 0x00
 #define NONE_AFFECTED 0x00
 #define OP1 0x40
 #define OP2 0x80
@@ -64,28 +65,48 @@
 #define SHIFT_6X 0x06
 #define SHIFT_7X 0X07
 
-typedef enum {BIT = 1, C_REGISTER, VALUE_8_BIT, REGISTER_8_BIT, ACCUMULATOR, IX_REGISTER,
-              IX_REGISTER_WOFFSET, IY_REGISTER, IY_REGISTER_WOFFSET, HL_REGISTER,
-              DE_REGISTER, MEMORY_16_BIT, VALUE_16_BIT, REGISTER_16_BIT, SP_REGISTER, AF1, AF2,
-              INTVECT_REGISTER, MEMREFRSH_REGISTER, CONDITION, NONE} operand_type_t;
-
+#define BIT  1
+#define C_REGISTER  2
+#define VALUE_8_BIT 3
+#define REGISTER_8_BIT 4
+#define ACCUMULATOR 5
+#define IX_REGISTER 6
+#define IY_REGISTER 7
+#define IX_REGISTER_WOFFSET 8
+#define IY_REGISTER_WOFFSET 9
+#define HL_REGISTER 10
+#define DE_REGISTER 11
+#define BC_REGISTER 26
+#define MEMORY_16_BIT 12
+#define VALUE_16_BIT 13
+#define REGISTER_16_BIT 14
+#define SP_REGISTER 15
+#define AF1 16
+#define AF2 17
+#define INTVECT_REGISTER 18
+#define MEMREFRSH_REGISTER 19
+#define CONDITION 20
+#define CARRY_SET 21
+#define CARRY_NOTSET 22
+#define ZERO_SET 23
+#define ZERO_NOTSET 24
+#define NONE 25
+              
 typedef struct {
         char *instruction_name;
         unsigned char number_of_operands;
-        operand_type_t operands[2];
+        unsigned char operands[2];
         unsigned char instruction_length;
         unsigned char instruction_value[4];
         unsigned char binary_code[4];
 } instruction_parameters_t;
 
-instruction_parameters_t *instruction_set[26];
-
-instructions_parameters_t a_instructions[] =
+instruction_parameters_t a_instructions[] =
 {
-        {"ADD", 2, {ACCUMULATOR, REGISTER_8_BIT}, 1, {0x80, NA, NA, NA}, {OP2 | _3BITS | SHIFT0X, NA, NA, NA}},
+        {"ADD", 2, {ACCUMULATOR, REGISTER_8_BIT}, 1, {0x80, NA, NA, NA}, {OP2 | _3BITS | SHIFT_0X, NA, NA, NA}},
         {"ADD", 2, {ACCUMULATOR, VALUE_8_BIT}, 2, {0xC6, 0x00, NA, NA}, {NONE_AFFECTED, OP2 | ALLBITS | _8BITVAL, NA, NA}},
         {"ADD", 2, {ACCUMULATOR, HL_REGISTER}, 1, {0x86, NA, NA, NA}, {NONE_AFFECTED, NA, NA, NA}},
-        {"ADD", 2, {ACCUMULATOR, IX_REGSITER_WOFFSET}, 3, {0xDD, 0x86, 0x00, NA}, {NONE_AFFECTED, NONE_AFFECTED, OP2 | ALLBITS | _8BITVAL, NA}},
+        {"ADD", 2, {ACCUMULATOR, IX_REGISTER_WOFFSET}, 3, {0xDD, 0x86, 0x00, NA}, {NONE_AFFECTED, NONE_AFFECTED, OP2 | ALLBITS | _8BITVAL, NA}},
         {"ADD", 2, {ACCUMULATOR, IY_REGISTER_WOFFSET}, 3, {0xFD, 0x86, 0x00, NA}, {NONE_AFFECTED, NONE_AFFECTED, OP2 | ALLBITS | _8BITVAL, NA}},
         {"ADC", 2, {ACCUMULATOR, REGISTER_8_BIT}, 1, {0x88, NA, NA, NA}, {OP2 | _3BITS | SHIFT_0X, NA, NA, NA}},
         {"ADC", 2, {ACCUMULATOR, VALUE_8_BIT}, 2, {0xCE, 0x00, NA, NA}, {NONE_AFFECTED, OP2 | ALLBITS | _8BITVAL, NA, NA}},
@@ -98,21 +119,22 @@ instructions_parameters_t a_instructions[] =
         {"AND", 2, {ACCUMULATOR, IX_REGISTER_WOFFSET}, 3, {0xDD, 0xA6, 0x00, NA}, {NONE_AFFECTED, NONE_AFFECTED, OP2 | ALLBITS | _8BITVAL, NA}},
         {"AND", 2, {ACCUMULATOR, IY_REGISTER_WOFFSET}, 3, {0xFD, 0xA6, 0x00, NA}, {NONE_AFFECTED, NONE_AFFECTED, OP2 | ALLBITS | _8BITVAL, NA}},
         {"ADD", 2, {HL_REGISTER, REGISTER_16_BIT}, 1, {0x09, NA, NA, NA}, {OP2 | _2BITS | SHIFT_4X, NA, NA, NA}},
-        {"ADC", 2, {HL_REGISTER, REGISTER_16_BIT}, 2, {0xED, 0x4A, NA, NA}, {NONE_AFFECTED, OP2 | _2BITS | SHIFT_4X}},
-        {"ADD", 2, {IX_REGISTER, REGISTER_16_BIT}, 2, {0xDD, 0x09, NA, NA}, {NONE_AFFECTED, OP2 | _2BITS | SHIFT_4X}},
-        {"ADD", 2, {IY_REGISTER, REGISTER_16_BIT}, 2, {0xFD, 0x09, NA, NA}, {NONE_AFFECTED, OP2 | _2BITS | SHIFT_4X}},
-        {NULL, 0, {0, 0}, 0, {0, 0, 0, 0}}
+        {"ADC", 2, {HL_REGISTER, REGISTER_16_BIT}, 2, {0xED, 0x4A, NA, NA}, {NONE_AFFECTED, OP2 | _2BITS | SHIFT_4X, NA, NA}},
+        {"ADD", 2, {IX_REGISTER, REGISTER_16_BIT}, 2, {0xDD, 0x09, NA, NA}, {NONE_AFFECTED, OP2 | _2BITS | SHIFT_4X, NA, NA}},
+        {"ADD", 2, {IY_REGISTER, REGISTER_16_BIT}, 2, {0xFD, 0x09, NA, NA}, {NONE_AFFECTED, OP2 | _2BITS | SHIFT_4X, NA, NA}},
+        {NULL, 0, {0, 0}, 0, {0, 0, 0, 0}, {0, 0, 0, 0}}
 };
+
 
 instruction_parameters_t b_instructions[] =
 {
         {"BIT", 2, {BIT, REGISTER_8_BIT}, 2, {0xCB, 0x40, NA, NA}, {NONE_AFFECTED, BOTH_OPS | _6BITS | OP1_OP2 | SHIFT_0X, NA, NA}},
-        {"BIT", 2, {BIT, HL_REGISTER}, 2, {0xCB, 0x46, NA, NA}, {NONE_AFFECTED, OP1 | _3BITS | SHIFT3X, NA, NA}},
+        {"BIT", 2, {BIT, HL_REGISTER}, 2, {0xCB, 0x46, NA, NA}, {NONE_AFFECTED, OP1 | _3BITS | SHIFT_3X, NA, NA}},
         {"BIT", 2, {BIT, IX_REGISTER_WOFFSET}, 4, {0xDD, 0xCB, 0x00, 0x46}, {NONE_AFFECTED, NONE_AFFECTED, OP2 | ALLBITS | _8BITVAL, OP1 | _3BITS | SHIFT_3X}},
         {"BIT", 2, {BIT, IY_REGISTER_WOFFSET}, 4, {0xFD, 0xCB, 0x00, 0x46}, {NONE_AFFECTED, NONE_AFFECTED, OP2 | ALLBITS | _8BITVAL, OP1 | _3BITS | SHIFT_3X}},
         {NULL, 0, {0, 0}, 0, {0, 0, 0, 0}}
 };
- 
+
 instruction_parameters_t c_instructions[] = 
 {
         {"CPI", 0, {NONE, NONE}, 2, {0xED, 0xA1, NA, NA}, {NONE_AFFECTED, NONE_AFFECTED, NA, NA}},
@@ -120,12 +142,12 @@ instruction_parameters_t c_instructions[] =
         {"CPD", 0, {NONE, NONE}, 2, {0xED, 0xA9, NA, NA}, {NONE_AFFECTED, NONE_AFFECTED, NA, NA}},
         {"CPDR", 0, {NONE, NONE}, 2, {0xED, 0xB9, NA, NA}, {NONE_AFFECTED, NONE_AFFECTED, NA, NA}},
         {"CP", 2, {ACCUMULATOR, REGISTER_8_BIT}, 1, {0xB8, NA, NA, NA}, {OP2 | _3BITS | SHIFT_0X, NA, NA, NA}},
-        {"CP", 2, {ACCUMULATOR, VALUE_8_BIT}, 2, {0xFE, 0x00, NA, NA}, {NONE_AFFECTED, OP2 | ALLBITS | _8BITVAL, NA, NA}}
+        {"CP", 2, {ACCUMULATOR, VALUE_8_BIT}, 2, {0xFE, 0x00, NA, NA}, {NONE_AFFECTED, OP2 | ALLBITS | _8BITVAL, NA, NA}},
         {"CP", 2, {ACCUMULATOR, HL_REGISTER}, 1, {0xBE, NA, NA, NA}, {NONE_AFFECTED, NA, NA, NA}},
         {"CP", 2, {ACCUMULATOR, IX_REGISTER_WOFFSET}, 3, {0xDD, 0xBE, 0x00, NA}, {NONE_AFFECTED, NONE_AFFECTED, OP2 | ALLBITS | _8BITVAL, NA}},
         {"CP", 2, {ACCUMULATOR, IY_REGISTER_WOFFSET}, 3, {0xFD, 0xBE, 0x00, NA}, {NONE_AFFECTED, NONE_AFFECTED, OP2 | ALLBITS | _8BITVAL, NA}},
         {"CPL", 0, {NONE, NONE}, 1, {0x2F, NA, NA, NA}, {NONE_AFFECTED, NA, NA, NA}},
-        {"CCF", 0, {NONE. NONE}, 1, {0x3F, NA, NA, NA}, {NONE_AFFECTED, NA, NA, NA}},
+        {"CCF", 0, {NONE, NONE}, 1, {0x3F, NA, NA, NA}, {NONE_AFFECTED, NA, NA, NA}},
         {"CALL", 1, {VALUE_16_BIT, NONE}, 3, {0xCD, 0x00, 0x00, NA}, {NONE_AFFECTED, OP1 | ALLBITS | _16BITVAL | LBYTE, OP1 | ALLBITS | _16BITVAL | HBYTE, NA}},
         {"CALL", 2, {CONDITION, VALUE_16_BIT}, 3, {0xC4, 0x00, 0x00, NA}, {OP1 | _3BITS | SHIFT_3X, OP2 | ALLBITS | _16BITVAL | LBYTE, OP2 | ALLBITS | _16BITVAL | HBYTE, NA}},
         {NULL, 0, {0, 0}, 0, {0, 0, 0, 0}}
@@ -158,11 +180,11 @@ instruction_parameters_t e_instructions[] =
         {NULL, 0, {0, 0}, 0, {0, 0, 0, 0}}
 };
 
-instructions_parameters_t h_instructions[] = 
+instruction_parameters_t h_instructions[] = 
 {
         {"HALT", 0, {NONE, NONE}, 1, {0x76, NA, NA, NA}, {NONE_AFFECTED, NA, NA ,NA}},
         {NULL, 0, {0, 0}, 0, {0, 0, 0, 0}}
-}
+};
 
 instruction_parameters_t i_instructions[] = 
 {
@@ -192,7 +214,7 @@ instruction_parameters_t j_instructions[] =
         {"JR", 1, {VALUE_8_BIT, NONE}, 2, {0x18, 0x00, NA, NA}, {NONE_AFFECTED, OP1 | ALLBITS | _8BITVAL, NA, NA}},
         {"JR", 2, {CARRY_SET, VALUE_8_BIT}, 2, {0x38, 0x00, NA, NA}, {NONE_AFFECTED, OP2 | ALLBITS | _8BITVAL, NA, NA}},
         {"JR", 2, {CARRY_NOTSET, VALUE_8_BIT}, 2, {0x30, 0x00, NA, NA}, {NONE_AFFECTED, OP2 | ALLBITS | _8BITVAL, NA, NA}},
-        {"JR", 2, {ZERO_SET, VALUE_8_BIT}, 2, {0x28, 0x00, NA, NA}, {NONE_AFFECTED, OP2 | ALLBITS | _8BITVAL, NA, NA]},
+        {"JR", 2, {ZERO_SET, VALUE_8_BIT}, 2, {0x28, 0x00, NA, NA}, {NONE_AFFECTED, OP2 | ALLBITS | _8BITVAL, NA, NA}},
         {"JR", 2, {ZERO_NOTSET, VALUE_8_BIT}, 2, {0x20, 0x00, NA, NA}, {NONE_AFFECTED, OP2 | ALLBITS | _8BITVAL, NA, NA}},
         {"JP", 1, {HL_REGISTER, NONE}, 1, {0xE9, NA, NA, NA}, {NONE_AFFECTED, NA, NA, NA}},
         {"JP", 1, {IX_REGISTER, NONE}, 2, {0xDD, 0xE9, NA, NA}, {NONE_AFFECTED, NONE_AFFECTED, NA, NA}},
@@ -213,14 +235,14 @@ instruction_parameters_t l_instructions[] =
         {"LD", 2, {IY_REGISTER_WOFFSET, REGISTER_8_BIT}, 3, {0xFD, 0x70, 0x00, NA}, {NONE_AFFECTED, OP2 | _3BITS | SHIFT_0X, OP1 | ALLBITS | _8BITVAL, NA}},
         {"LD", 2, {HL_REGISTER, VALUE_8_BIT}, 2, {0x36, 0x00, NA, NA}, {NONE_AFFECTED, OP2 | ALLBITS | _8BITVAL, NA, NA}},
         {"LD", 2, {IX_REGISTER_WOFFSET, VALUE_8_BIT}, 4, {0xDD, 0x36, 0x00, 0x00}, {NONE_AFFECTED, NONE_AFFECTED, OP1 | ALLBITS | _8BITVAL, OP2 | ALLBITS | _8BITVAL}},
-        {"LD", 2, {IY_REGISTER_WOFFSET, VALUE_8_BIT}, 4, {0xFD, 0x36, 0x00, 0x00}, {NONE_AFFECTED, NONE_AFFECTED, OP1 | ALLBITS | _8BITBAL, OP2 | ALLBITS | _8BITVAL}},
+        {"LD", 2, {IY_REGISTER_WOFFSET, VALUE_8_BIT}, 4, {0xFD, 0x36, 0x00, 0x00}, {NONE_AFFECTED, NONE_AFFECTED, OP1 | ALLBITS | _8BITVAL, OP2 | ALLBITS | _8BITVAL}},
         {"LD", 2, {ACCUMULATOR, BC_REGISTER}, 1, {0x0A, NA, NA, NA}, {NONE_AFFECTED, NA, NA, NA}},
         {"LD", 2, {ACCUMULATOR, DE_REGISTER}, 1, {0x1A, NA, NA, NA}, {NONE_AFFECTED, NA, NA, NA}},
         {"LD", 2, {ACCUMULATOR, VALUE_16_BIT}, 3, {0x3A, 0x00, 0x00, NA}, {NONE_AFFECTED, OP2 | ALLBITS | _16BITVAL | LBYTE, OP2 | ALLBITS | _16BITVAL | HBYTE, NA}},
         {"LD", 2, {BC_REGISTER, ACCUMULATOR}, 1, {0x02, NA, NA, NA}, {NONE_AFFECTED, NA, NA, NA}},
         {"LD", 2, {DE_REGISTER, ACCUMULATOR}, 1, {0x12, NA, NA, NA}, {NONE_AFFECTED, NA, NA, NA}},
         {"LD", 2, {VALUE_16_BIT, ACCUMULATOR}, 3, {0x32, 0x00, 0x00, NA}, {NONE_AFFECTED, OP1 | ALLBITS | _16BITVAL | LBYTE, OP1 | ALLBITS | _16BITVAL | HBYTE, NA}},
-        {"LD", 2, {ACCUMULATOR, INTVECT_REGISTER}, 2, {0xED, 0x57, NA, NA}. {NONE_AFFECTED, NONE_AFFECTED, NA, NA]},
+        {"LD", 2, {ACCUMULATOR, INTVECT_REGISTER}, 2, {0xED, 0x57, NA, NA}, {NONE_AFFECTED, NONE_AFFECTED, NA, NA}},
         {"LD", 2, {ACCUMULATOR, MEMREFRSH_REGISTER}, 2, {0xED, 0x5F, NA, NA}, {NONE_AFFECTED, NONE_AFFECTED, NA, NA}},
         {"LD", 2, {INTVECT_REGISTER, ACCUMULATOR}, 2, {0xED, 0x47, NA, NA}, {NONE_AFFECTED, NONE_AFFECTED, NA, NA}},
         {"LD", 2, {MEMREFRSH_REGISTER, ACCUMULATOR}, 2, {0xED, 0x4F, NA, NA}, {NONE_AFFECTED, NONE_AFFECTED, NA, NA}},
@@ -245,12 +267,13 @@ instruction_parameters_t l_instructions[] =
          {NULL, 0, {0, 0}, 0, {0, 0, 0, 0}}
 };
 
+
 instruction_parameters_t n_instructions[] = 
 {
         {"NEG", 0, {NONE, NONE}, 2, {0xED, 0x44, NA, NA}, {NONE_AFFECTED, NONE_AFFECTED, NA, NA}},
         {"NOP", 0, {NONE, NONE}, 1, {0x00, NA, NA, NA}, {NONE_AFFECTED, NA, NA, NA}},
         {NULL, 0, {0, 0}, 0, {0, 0, 0, 0}}
-}
+};
 
 instruction_parameters_t o_instructions[] = 
 {
@@ -261,18 +284,20 @@ instruction_parameters_t o_instructions[] =
         {"OR", 2, {ACCUMULATOR, IY_REGISTER_WOFFSET}, 3, {0xFD, 0xB6, 0x00, NA}, {NONE_AFFECTED, NONE_AFFECTED, OP2 | ALLBITS | _8BITVAL, NA}},
         {"OUT", 2, {VALUE_8_BIT, ACCUMULATOR}, 2, {0xD3, 0x00, NA, NA}, {NONE_AFFECTED, OP1 | ALLBITS | _8BITVAL, NA, NA}},
         {"OUT", 2, {C_REGISTER, REGISTER_8_BIT}, 2, {0xED, 0x41, NA, NA}, {NONE_AFFECTED, OP2 | _3BITS | SHIFT_3X, NA, NA}},
-        {"OUTI" 0, {NONE, NONE}, 2, {0xED, 0xA3, NA, NA}, {NONE_AFFECTED, NONE_AFFECTED, NA, NA}},
+        {"OUTI", 0, {NONE, NONE}, 2, {0xED, 0xA3, NA, NA}, {NONE_AFFECTED, NONE_AFFECTED, NA, NA}},
         {"OTIR", 0, {NONE, NONE}, 2, {0xED, 0xB3, NA, NA}, {NONE_AFFECTED, NONE_AFFECTED, NA, NA}},
         {"OUTD", 0, {NONE, NONE}, 2, {0xED, 0xAB, NA, NA}, {NONE_AFFECTED, NONE_AFFECTED, NA, NA}},
         {"OTDR", 0, {NONE, NONE}, 2, {0xED, 0xBB, NA, NA}, {NONE_AFFECTED, NONE_AFFECTED, NA, NA}},
         {NULL, 0, {0, 0}, 0, {0, 0, 0, 0}}
-}
+};
+
+
 instruction_parameters_t p_instructions[] = 
 {
         {"PUSH", 1, {REGISTER_16_BIT, NONE}, 1, {0xC5, NA, NA, NA}, {OP1 | _2BITS | SHIFT_4X, NA, NA, NA}},
         {"PUSH", 1, {IX_REGISTER, NONE}, 2, {0xDD, 0xE5, NA, NA}, {NONE_AFFECTED, NONE_AFFECTED, NA, NA}},
         {"PUSH", 1, {IY_REGISTER, NONE}, 2, {0xFD, 0xE5, NA, NA}, {NONE_AFFECTED, NONE_AFFECTED, NA, NA}},
-        {"POP", 1, {REGSITER_16_BIT, NONE}, 1, {0xC1, NA, NA, NA}, {OP1 | _2BITS | SHIFT_4X, NA, NA, NA}},
+        {"POP", 1, {REGISTER_16_BIT, NONE}, 1, {0xC1, NA, NA, NA}, {OP1 | _2BITS | SHIFT_4X, NA, NA, NA}},
         {"POP", 1, {IX_REGISTER, NONE}, 2, {0xDD, 0xE1, NA, NA}, {NONE_AFFECTED, NONE_AFFECTED, NA, NA}},
         {"POP", 1, {IY_REGISTER, NONE}, 2, {0xFD, 0xE1, NA, NA}, {NONE_AFFECTED, NONE_AFFECTED, NA, NA}},
         {NULL, 0, {0, 0}, 0, {0, 0, 0, 0}}
@@ -297,7 +322,7 @@ instruction_parameters_t r_instructions[] =
         {"RRC", 1, {IX_REGISTER_WOFFSET, NONE}, 4, {0xDD, 0xCB, 0x00, 0x0E}, {NONE_AFFECTED, NONE_AFFECTED, OP1 | ALLBITS | _8BITVAL, NONE_AFFECTED}},
         {"RRC", 1, {IY_REGISTER_WOFFSET, NONE}, 4, {0xFD, 0xCB, 0x00, 0x0E}, {NONE_AFFECTED, NONE_AFFECTED, OP1 | ALLBITS | _8BITVAL, NONE_AFFECTED}},
         {"RR", 1, {REGISTER_8_BIT, NONE}, 2, {0xCB, 0x18, NA, NA}, {NONE_AFFECTED, OP1 | _3BITS | SHIFT_0X, NA, NA}},
-        {"RR", 1, {HL_REGISTER, NONE}, 2, {0xCB, 0x1E, NA, NA}. {NONE_AFFECTED, NONE_AFFECTED, NA, NA}},
+        {"RR", 1, {HL_REGISTER, NONE}, 2, {0xCB, 0x1E, NA, NA}, {NONE_AFFECTED, NONE_AFFECTED, NA, NA}},
         {"RR", 1, {IX_REGISTER_WOFFSET, NONE}, 4, {0xDD, 0xCB, 0x00, 0x1E}, {NONE_AFFECTED, NONE_AFFECTED, OP1 | ALLBITS | _8BITVAL, NONE_AFFECTED}},
         {"RR", 1, {IY_REGISTER_WOFFSET, NONE}, 4, {0xFD, 0xCB, 0x00, 0x1E}, {NONE_AFFECTED, NONE_AFFECTED, OP1 | ALLBITS | _8BITVAL, NONE_AFFECTED}},
         {"RLD", 0, {NONE, NONE}, 2, {0xED, 0x6F, NA, NA}, {NONE_AFFECTED, NONE_AFFECTED, NA, NA}},
@@ -311,7 +336,7 @@ instruction_parameters_t r_instructions[] =
         {"RETI", 0, {NONE, NONE}, 2, {0xED, 0x4D, NA, NA}, {NONE_AFFECTED, NONE_AFFECTED, NA, NA}},
         {"RETN", 0, {NONE, NONE}, 2, {0xED, 0x45, NA, NA}, {NONE_AFFECTED, NONE_AFFECTED, NA, NA}},
         {NULL, 0, {0, 0}, 0, {0, 0, 0, 0}}
-}
+};
 
 instruction_parameters_t s_instructions[] = 
 {
@@ -322,7 +347,7 @@ instruction_parameters_t s_instructions[] =
         {"SUB", 2, {ACCUMULATOR, IY_REGISTER_WOFFSET}, 3, {0xFD, 0x96, 0x00, NA}, {NONE_AFFECTED, NONE_AFFECTED, OP2 | ALLBITS | _8BITVAL, NA}},
         {"SBC", 2, {ACCUMULATOR, REGISTER_8_BIT}, 1, {0x98, NA, NA, NA}, {OP2 | _3BITS | SHIFT_0X, NA, NA, NA}},
         {"SBC", 2, {ACCUMULATOR, VALUE_8_BIT}, 2, {0xDE, 0x00, NA, NA}, {NONE_AFFECTED, OP2 | ALLBITS | _8BITVAL, NA, NA}},
-        {"SBC", 2, {ACCUMULAOTR, HL_REGISTER}, 1, {0x9E, NA, NA, NA}, {NONE_AFFECTED, NA, NA, NA}},
+        {"SBC", 2, {ACCUMULATOR, HL_REGISTER}, 1, {0x9E, NA, NA, NA}, {NONE_AFFECTED, NA, NA, NA}},
         {"SBC", 2, {ACCUMULATOR, IX_REGISTER_WOFFSET}, 3, {0xDD, 0x9E, 0x00, NA}, {NONE_AFFECTED, NONE_AFFECTED, OP2 | ALLBITS | _8BITVAL, NA}},
         {"SBC", 2, {ACCUMULATOR, IY_REGISTER_WOFFSET}, 3, {0xFD, 0x9E, 0x00, NA}, {NONE_AFFECTED, NONE_AFFECTED, OP2 | ALLBITS | _8BITVAL, NA}},
         {"SCF", 0, {NONE, NONE}, 1, {0x37, NA, NA, NA}, {NONE_AFFECTED, NA, NA, NA}},
@@ -349,9 +374,14 @@ instruction_parameters_t s_instructions[] =
 instruction_parameters_t x_instructions[] = 
 {
         {"XOR", 2, {ACCUMULATOR, REGISTER_8_BIT}, 1, {0xA8, NA, NA, NA}, {OP2 | _3BITS | SHIFT_0X, NA, NA, NA}},
-        {"XOR", 2, {ACCUMULATOR, VALUE_8_BIT}, 2, {0xEE, 0x00, NA, NA}, {NONE_AFFECTED, OP2 | ALLBITS | _8BITVAL, NA, NA]},
+        {"XOR", 2, {ACCUMULATOR, VALUE_8_BIT}, 2, {0xEE, 0x00, NA, NA}, {NONE_AFFECTED, OP2 | ALLBITS | _8BITVAL, NA, NA}},
         {"XOR", 2, {ACCUMULATOR, HL_REGISTER}, 1, {0xAE, NA, NA, NA}, {NONE_AFFECTED, NA, NA, NA}},
         {"XOR", 2, {ACCUMULATOR, IX_REGISTER_WOFFSET}, 3, {0xDD, 0xAE, 0x00, NA}, {NONE_AFFECTED, NONE_AFFECTED, OP2 | ALLBITS | _8BITVAL, NA}},
         {"XOR", 2, {ACCUMULATOR, IY_REGISTER_WOFFSET}, 3, {0xFD, 0xAE, 0x00, NA}, {NONE_AFFECTED, NONE_AFFECTED, OP2 | ALLBITS | _8BITVAL, NA}},
         {NULL, 0, {0, 0}, 0, {0, 0, 0, 0}}
 };
+
+instruction_parameters_t *instruction_set[26] = {a_instructions, b_instructions, c_instructions, d_instructions, e_instructions, NULL, NULL, h_instructions,
+						 i_instructions, j_instructions, NULL, l_instructions, NULL, n_instructions, o_instructions, p_instructions,
+						 NULL, r_instructions, s_instructions,  NULL, NULL, NULL, NULL, x_instructions, NULL, NULL};
+
