@@ -45,6 +45,7 @@
 #define ALLBITS 0x00
 #define _2BITS 0x10
 #define _3BITS 0x20
+// if _6BITS is selected, then either OP1_OP2 or OP2_OP1 must be selected
 #define _6BITS 0x30
 
 #define _8BITVAL 0x00
