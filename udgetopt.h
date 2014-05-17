@@ -6,17 +6,12 @@
 
 // Code:
 
-#ifdef UDGETOPT_H
+#ifndef UDGETOPT_H
 #define UDGETOPT_H
 
-#ifdef WINDOWS
+char *optarg;
 
-int getopt(int argc, char *const *argv, const char *options);
+int udgetopt(int argc, char *const *argv, const char *options);
 
-#else
-
-#include <unistd.h>
-
-#endif
 
 #endif
