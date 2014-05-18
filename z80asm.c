@@ -4,13 +4,14 @@
 
 // Description:
 
-/* This file is the main source file for the Zilog Z80 Assembler (z80asm). */
-
-// Code:
+/* This file is the main source file for the Zilog Z80 Assembler (z80asm). 
+ */
 
 #include <stdio.h>
 #include <stdlib.h>
 #include "udgetopt.h"
+#include "defines.h"
+#include "parse.h"
 
 #define STDERR(str, ...) fprintf(stderr, "error: " str, ##__VA_ARGS__)
 #define EFAILURE exit(EXIT_FAILURE);
@@ -23,8 +24,10 @@ int main(int argc, char **argv) {
         int c;
         unsigned char index;
         enum flag_t {NOT_SET = 0, SET} s_flag, err_flag;
-        enum loop_status_t {EXIT = 0, CONTINUE} loop_status;
-        enum action_status_t {LOOKFOR_NONWHITESPACE = 0, BEGIN_PARSING} action_status;
+        
+        loop_status_t loop_status;
+        action_status_t action_status;
+        program_status_t program_status;
 
         s_flag = err_flag = NOT_SET;
 
@@ -65,53 +68,13 @@ int main(int argc, char **argv) {
                 EFAILURE;
         }
 
-        /* Look for the first non-whitespace character on the current line. If the first
-           non-whitespace character is a semicolon, then the rest of the current line is
-           part of a comment and the program should analyze immediately after the
-           current line. This continues until something can be analyzed that is not part
-           of a comment. When that happens, the following do-loop terminates and program
-           execution continues thereafter. */
-        action_status = LOOKFOR_NONWHITESPACE;
-        
-        do {
-                loop_status = CONTINUE;
-                do {
-                        c = fgetc(sourcefile_handle);
-                        if(c != ' ')
-                                loop_status = EXIT;
-                } while(c != EOF && loop_status == CONTINUE);
 
-                if(c == ';') {
-                        loop_status = CONTINUE;
-                        do {
-                                c = fgetc(sourcefile_handle);
-                                if(c == '\n') {
-                                        loop_status = EXIT;
-                                        action_status = LOOKFOR_NONWHITESPACE;
-                                }
-                        } while(c != EOF && loop_status == CONTINUE);
-                }
-                else
-                        action_status = BEGIN_PARSING;
-        } while(action_status == LOOKFOR_NONWHITESPACE);
+        program_status = PARSE_SOURCEFILE;
 
-        /* Once the first non-whitespace character has been found, extract all the
-           characters from this position all the way until either a whitespace character
-           or a semicolon is encountered, whichever occurs first. After, parse the
-           characters extracted to determine the next course of action. */
-        loop_status = CONTINUE;
-        index = 0;
+        while(extract_nearestword(sourcefile_handle, buffer, 20) == PARSE_SOURCEFILE) {
+                DEBUG("the string is %s\n", buffer);
+        }
         
-        do {
-                buffer[index++] = c;
-                c = fgetc(sourcefile_handle);
-                if(c == ' ' || c == ';') {
-                        buffer[index] = '\0';
-                        loop_status = EXIT;
-                }
-        } while(c != EOF && loop_status == CONTINUE);
-        
-        DEBUG("the string obtained is %s\n", buffer);
 
         if((fclose(sourcefile_handle)) == EOF) {
                 STDERR("the source file (%s) could not be closed\n", sourcefile_name);
