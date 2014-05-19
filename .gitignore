@@ -1,6 +1,7 @@
 *.c~
 *.h~
 *.exe
+*.exe.stackdump
 *.o
 *.bat
 *.s

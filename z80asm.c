@@ -12,6 +12,7 @@
 #include "udgetopt.h"
 #include "defines.h"
 #include "parse.h"
+#include "z80instructionset.h"
 
 #define STDERR(str, ...) fprintf(stderr, "error: " str, ##__VA_ARGS__)
 #define EFAILURE exit(EXIT_FAILURE);
@@ -24,6 +25,8 @@ int main(int argc, char **argv) {
         int c;
         unsigned char index;
         enum flag_t {NOT_SET = 0, SET} s_flag, err_flag;
+        word_type_t type;
+        uint16_t symboltable_currentsize = 0, symboltable_actualsize = 0;
         
         loop_status_t loop_status;
         action_status_t action_status;
@@ -68,12 +71,38 @@ int main(int argc, char **argv) {
                 EFAILURE;
         }
 
+        init_symboltable(&symboltable_list, z80_symbols, &symboltable_currentsize,
+                         &symboltable_actualsize);
+
+        if(symboltable_list == NULL) {
+                STDERR("the symbol table could not be created\n");
+                EFAILURE;
+        }
+
+        for(index = 0; index < symboltable_currentsize; ++index) {
+                DEBUG("the symbol is %s\n", symboltable_list[index].name);
+        }
+
 
         program_status = PARSE_SOURCEFILE;
 
         while(extract_nearestword(sourcefile_handle, buffer, 20) == PARSE_SOURCEFILE) {
-                DEBUG("the string is %s\n", buffer);
+
+                type = parse_wordtype(buffer, instruction_set);
+                DEBUG("the string is %s --- ", buffer);
+                if(type == INSTRUCTION) 
+                        DEBUG("its type is an instruction\n");
+                else if(type == LABEL)
+                        DEBUG("its type is a label\n");
+                else if(type == DIRECTIVE)
+                        DEBUG("its type is a directive\n");
+                else
+                        DEBUG("its type is unknown\n");
+
+
         }
+
+        free_symboltable(&symboltable_list);
         
 
         if((fclose(sourcefile_handle)) == EOF) {

@@ -17,4 +17,6 @@
 program_status_t extract_nearestword(FILE *file_handle, char *buffer,
                                      unsigned char max_buffersize);
 
+word_type_t parse_wordtype(const char *buffer, instruction_parameters_t **instruction_set);
+
 #endif

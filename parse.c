@@ -3,6 +3,7 @@
 // Created: 17, May 2014
 
 #include <stdio.h>
+#include "string.h"
 #include "defines.h"
 
 program_status_t extract_nearestword(FILE *file_handle, char *buffer,
@@ -24,7 +25,7 @@ program_status_t extract_nearestword(FILE *file_handle, char *buffer,
         do {
                 do {
                         c = fgetc(file_handle);
-                } while(c != EOF && (c == ' ' || c == '\r' || c == '\n'));
+                } while(c != EOF && (c == ' ' || c == '\r' || c == '\n' || c == '\t'));
 
                 if(c == ';') {
                         do {
@@ -47,7 +48,8 @@ program_status_t extract_nearestword(FILE *file_handle, char *buffer,
                 do {
                         buffer[index++] = c;
                         c = fgetc(file_handle);
-                } while(c != EOF && c != ';' && c != ' ' && c != '\n' && c != '\r');
+                } while(c != EOF && c != ';' && c != ' ' && c != '\n' && c != '\r' &&
+                        c != '\t');
                 buffer[index] = '\0';
 
                 if(c == ';') {
@@ -65,4 +67,37 @@ program_status_t extract_nearestword(FILE *file_handle, char *buffer,
         }
         
         return program_status;
+}
+
+word_type_t parse_wordtype(const char *buffer,
+                           instruction_parameters_t **instruction_set) {
+        word_type_t word_type = UNKNOWN;
+        int index1, index2;
+
+        if(buffer[(strlen(buffer)) - 1] == ':') {
+                word_type = LABEL;
+        }
+
+        if(word_type == UNKNOWN) {
+                if((!strcmp("ORG", buffer)) || (!strcmp("EQU", buffer)) ||
+                   (!strcmp("END", buffer)))
+                        word_type = DIRECTIVE;
+        }
+        
+
+        if(word_type == UNKNOWN) {
+                index1 = buffer[0] - 65;
+                index2 = 0;
+                if(instruction_set[index1] != NULL) {
+                        while(instruction_set[index1][index2].instruction_name !=
+                              NULL) {
+                                if(!strcmp(instruction_set[index1][index2].instruction_name,
+                                           buffer))
+                                        word_type = INSTRUCTION;
+                                ++index2;
+                        }
+                }
+        }
+        
+        return word_type;
 }
