@@ -79,10 +79,12 @@ typedef enum action_status_t{STOP_ACTION = 0, LOOKFOR_NONWHITESPACE,
 typedef enum program_status_t {PARSE_SOURCEFILE = 0,
                                ASSEMBLE_OUTPUTFILE} program_status_t;
 typedef enum word_type_t {UNKNOWN = 0, LABEL, DIRECTIVE, INSTRUCTION} word_type_t;
+typedef enum line_status_t {COMMNTDELIM_DETECTED = 0, NO_COMMNTDELIM} line_status_t;
+typedef enum return_status_t {ERROR = 0, NO_ERROR} return_status_t;
 
 typedef struct instruction_parameters_t {
         char *instruction_name;
-        uint8_t number_of_operands;
+        uint8_t n_operands;
         uint8_t operand_type[2];
         uint8_t instruction_length;
         uint8_t instruction_value[4];

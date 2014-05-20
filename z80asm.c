@@ -27,7 +27,9 @@ int main(int argc, char **argv) {
         enum flag_t {NOT_SET = 0, SET} s_flag, err_flag;
         word_type_t type;
         uint16_t symboltable_currentsize = 0, symboltable_actualsize = 0;
+        int16_t mainindex, subindex;
         
+        line_status_t line_status;
         loop_status_t loop_status;
         action_status_t action_status;
         program_status_t program_status;
@@ -73,33 +75,34 @@ int main(int argc, char **argv) {
 
         init_symboltable(&symboltable_list, z80_symbols, &symboltable_currentsize,
                          &symboltable_actualsize);
-
         if(symboltable_list == NULL) {
                 STDERR("the symbol table could not be created\n");
                 EFAILURE;
         }
 
-        for(index = 0; index < symboltable_currentsize; ++index) {
-                DEBUG("the symbol is %s\n", symboltable_list[index].name);
-        }
-
-
         program_status = PARSE_SOURCEFILE;
 
-        while(extract_nearestword(sourcefile_handle, buffer, 20) == PARSE_SOURCEFILE) {
+        while(extract_nearestword(sourcefile_handle, buffer, 20,
+                                  &line_status) == PARSE_SOURCEFILE) {
 
                 type = parse_wordtype(buffer, instruction_set);
-                DEBUG("the string is %s --- ", buffer);
-                if(type == INSTRUCTION) 
-                        DEBUG("its type is an instruction\n");
-                else if(type == LABEL)
-                        DEBUG("its type is a label\n");
-                else if(type == DIRECTIVE)
-                        DEBUG("its type is a directive\n");
-                else
-                        DEBUG("its type is unknown\n");
+                
+                switch(type) {
+                case INSTRUCTION:
+                        handle_instruction(sourcefile_handle, buffer, line_status);
+                        break;
+#ifdef j
+                case LABEL:
+                        handle_label();
+                        break;
+                case DIRECTIVE:
+                        handle_directive();
+                        break;
+                case UNKNOWN:
+                        break;
 
-
+#endif
+                }
         }
 
         free_symboltable(&symboltable_list);

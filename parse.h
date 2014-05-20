@@ -15,8 +15,11 @@
 #include "defines.h"
 
 program_status_t extract_nearestword(FILE *file_handle, char *buffer,
-                                     unsigned char max_buffersize);
+                                     unsigned char max_buffersize,
+                                     line_status_t *line_status);
 
 word_type_t parse_wordtype(const char *buffer, instruction_parameters_t **instruction_set);
+
+void handle_instruction(FILE *file_handle, char *buffer, line_status_t line_status);
 
 #endif
