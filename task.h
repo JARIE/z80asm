@@ -13,4 +13,6 @@ void init_symboltable(symboltable_t **symboltable_list, symboltable_t *defined_s
 
 void free_symboltable(symboltable_t **symboltable_list);
 
+void goto_nextline(FILE *file_handle, line_status_t);
+
 #endif

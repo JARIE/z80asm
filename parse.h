@@ -20,6 +20,13 @@ program_status_t extract_nearestword(FILE *file_handle, char *buffer,
 
 word_type_t parse_wordtype(const char *buffer, instruction_parameters_t **instruction_set);
 
-void handle_instruction(FILE *file_handle, char *buffer, line_status_t line_status);
+
+status_t handle_instruction(FILE *file_handle, char *buffer,
+                            line_status_t *line_status,
+                            instruction_parameters_t **instruction_set,
+                            uint16_t *location_counter);
+
+void extract_operands(FILE *file_handle, char *operand1, char *operand2,
+                      line_status_t *line_status, uint8_t *n_operands);
 
 #endif

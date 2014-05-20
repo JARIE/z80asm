@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include "string.h"
 #include "defines.h"
+#include "parse.h"
 
 program_status_t extract_nearestword(FILE *file_handle, char *buffer,
                                      unsigned char max_buffersize,
@@ -53,14 +54,20 @@ program_status_t extract_nearestword(FILE *file_handle, char *buffer,
                         c != '\t');
                 buffer[index] = '\0';
 
-                if(c == ';') 
+                if(c == EOF)
+                        *line_status = ENDOFFILE_DETECTED;
+                else if(c == ';')
                         *line_status = COMMNTDELIM_DETECTED;
-                else
-                        *line_status = NO_COMMNTDELIM;
-
+                else if(c == ' ' || c == '\t')
+                        *line_status = NONE_DETECTED;
+                else if(c == '\n')
+                        *line_status = NEWLINE_DETECTED;
+                else if(c == '\r')
+                        *line_status = CARRIAGERETURN_DETECTED;
                 program_status = PARSE_SOURCEFILE;
                 break;
         case STOP_ACTION:
+                *line_status = ENDOFFILE_DETECTED;
                 program_status = ASSEMBLE_OUTPUTFILE;
                 break;
         }
@@ -72,6 +79,7 @@ word_type_t parse_wordtype(const char *buffer,
                            instruction_parameters_t **instruction_set) {
         word_type_t word_type = UNKNOWN;
         int index1, index2;
+
 
         if(buffer[(strlen(buffer)) - 1] == ':') {
                 word_type = LABEL;
@@ -102,115 +110,156 @@ word_type_t parse_wordtype(const char *buffer,
         return word_type;
 }
 
-void handle_instruction(FILE *file_handle, char *buffer, line_status_t line_status) {
-        char *instruction;
-        char operand1[20], operand2[20], temp_buffer[20];
-        uint8_t operand1_type, operand2_type;
-        int c, index, num_of_operands = 0;
-        typedef enum instruction_status_t {ERROR = 0, NO_ERROR} instruction_status_t;;
+status_t handle_instruction(FILE *file_handle, char *buffer,
+                                   line_status_t *line_status,
+                                   instruction_parameters_t **instruction_set,
+                                   uint16_t *location_counter) {
+        char *instruction, operand1[20], operand2[20];
+        uint8_t operand1_type, operand2_type, n_operands;
+        int c, index1, index2;
+        status_t status;
 
-
-        instruction_status_t instruction_status = NO_ERROR;
         instruction = buffer;
+        n_operands = 0;
+
+        printf("%s\n", instruction);
+
+        if(*line_status == ENDOFFILE_DETECTED || *line_status == COMMNTDELIM_DETECTED ||
+           *line_status == NEWLINE_DETECTED || *line_status == CARRIAGERETURN_DETECTED) {
+                index1 = instruction[0] - 65;
+                index2 = 0;
+
+                while(instruction_set[index1][index2].instruction_name != NULL) {
+                        if(!strcmp(instruction_set[index1][index2].instruction_name,
+                                   instruction) &&
+                           (n_operands ==
+                            instruction_set[index1][index2].n_operands)) {
+                                *location_counter +=
+                                        instruction_set[index1][index2].instruction_length;
+                                status = NO_ERROR;
+                        }
+                        ++index2;
+                }
+                if(status != NO_ERROR)
+                        status = ERROR;
+        }
+        else {
+                extract_operands(file_handle, operand1, operand2, line_status,
+                                 &n_operands);
+                if(n_operands == 0) {
+                        printf("no operands\n");
+                        // operand1_type = NONE;
+                        //operand2_type = NONE;
+                }
+                else if(n_operands == 1) {
+                        printf("one operand\n");
+                        //operand1_type = parse_operandtype(operand1);
+                        //operand2_type = NONE;
+                }
+                else { //n_operands == 2
+                        printf("two operands\n");
+                        //operand1_type = parse_operandtype(operand1);
+                        //operand2_type = parse_operandtype(operand2);
+                }
+                status = NO_ERROR;
+        }
+        
+        return status;
+}
+
+void extract_operands(FILE *file_handle, char *operand1, char *operand2,
+                      line_status_t *line_status, uint8_t *n_operands) {
+        int c, index;
+        char buffer[20];
 
         do {
                 c = fgetc(file_handle);
-        } while(c != EOF && c != '\r' && c != '\n' && (c == ' ' || c == '\t'));
+        } while(c != EOF && (c == ' ' || c == '\t'));
 
-        if(c == '\r' || c == ';') {
-                do {
-                        c = fgetc(file_handle);
-                } while(c != EOF && c != '\n');
-                operand1_type = NONE;
-                operand2_type = NONE;
-                num_of_operands = 0;
-        }
-        else if(c == EOF) {
-                operand1_type = NONE;
-                operand2_type = NONE;
-                num_of_operands = 0;
+        if(c == EOF || c == '\n' || c == '\r' || c == ';') {
+                *n_operands = 0;
+                
+                if(c == EOF)
+                        *line_status = ENDOFFILE_DETECTED;
+                else if(c == '\n')
+                        *line_status = NEWLINE_DETECTED;
+                else if(c == '\r')
+                        *line_status = CARRIAGERETURN_DETECTED;
+                else
+                        *line_status = COMMNTDELIM_DETECTED;
         }
         else {
                 index = 0;
                 do {
-                        temp_buffer[index++] = c;
+                        buffer[index++] = c;
                         c = fgetc(file_handle);
-                } while(c != EOF && c != ';' && c != ' ' && c != '\n' && c != '\r' &&
-                        c != '\t');
-                temp_buffer[index] = '\0';
+                } while(c != EOF && c != ' ' && c != '\t' && c != '\n' && c != '\r' &&
+                        c != ';');
+                buffer[index] = '\0';
 
-                index = strlen(temp_buffer) - 1;
+                *n_operands = 1;
 
-                ++num_of_operands;
+                if(c == EOF)
+                        *line_status = ENDOFFILE_DETECTED;
+                else if(c == '\n')
+                        *line_status = NEWLINE_DETECTED;
+                else if(c == '\r')
+                        *line_status = CARRIAGERETURN_DETECTED;
+                else if(c == ';')
+                        *line_status = COMMNTDELIM_DETECTED;
+                else
+                        *line_status = NONE_DETECTED;
 
-                if(temp_buffer[index] != ',' && c != ';') {
-                        strcpy(operand1, temp_buffer);
-                }
-                else if(temp_buffer[index] != ',' && c == ';') {
-                        strcpy(operand1, temp_buffer);
-                        
-                        do {
-                                c = fgetc(file_handle);
-                        } while(c != EOF && c != '\n');
-                } 
-                else if(temp_buffer[index] == ',' && c != ';') {
-                        strncpy(operand1, temp_buffer, index);
-                        operand1[index] = '\0';
-
-                        do {
-                                c = fgetc(file_handle);
-                        } while(c != EOF && c != '\r' && c != '\n' && (c == ' ' ||
-                                                                       c == '\t'));
-
-                        if(c == '\r' || c == ';') {
-                                do {
-                                        c = fgetc(file_handle);
-                                } while(c != EOF && c != '\n');
-                                instruction_status = ERROR;
-                        }
-                        else if(c == EOF) {
-                                instruction_status = ERROR;
-                        }
-                        else {
-                                index = 0;
-                                do {
-                                        temp_buffer[index++] = c;
-                                        c = fgetc(file_handle);
-                                } while(c != EOF && c != ';' && c != ' ' && c != '\r' &&
-                                        c != '\n' && c != '\t');
-
-                                temp_buffer[index] = '\0';
-
-                                strcpy(operand2, temp_buffer);
-                                ++num_of_operands;
-
-                                if(c == ';') {
-                                        do {
-                                                c = fgetc(file_handle);
-                                        } while(c != EOF && c != '\n');
-                                }
-                        }
-                }
-                else if(temp_buffer[index] == ',' && c == ';') {
-                        do {
-                                c = fgetc(file_handle);
-                        } while(c != EOF && c != '\n');
-                        instruction_status = ERROR;
-                }
+                strcpy(operand1, buffer);
         }
 
-        
+        index = strlen(buffer) - 1;
 
-        if(instruction_status == NO_ERROR) {
-                if(num_of_operands == 1)
-                        printf("%s\n", operand1);
-                else if(num_of_operands == 2)
-                        printf("%s %s\n", operand1, operand2);
-                printf("number of operands detected for \"%s\" is %d\n", instruction,
-                       num_of_operands);
-        }
-        else {
-                printf("error detected\n");
+        if(*line_status == NONE_DETECTED && buffer[index] == ',') {
+                operand1[index] = '\0';
+                
+                do {
+                        c = fgetc(file_handle);
+                } while(c != EOF && (c == ' ' || c == '\t'));
+
+                if(c == EOF)
+                        *line_status = ENDOFFILE_DETECTED;
+                else if(c == '\n')
+                        *line_status = NEWLINE_DETECTED;
+                else if(c == '\r')
+                        *line_status = CARRIAGERETURN_DETECTED;
+                else if(c == ';')
+                        *line_status = COMMNTDELIM_DETECTED;
+                else {
+                        index = 0;
+                        do {
+                                buffer[index] = c;
+                                c = fgetc(file_handle);
+                        } while(c != EOF && c != ' ' && c != '\t' && c != '\n' &&
+                                c != '\r' && c != ';');
+                        buffer[index] = '\0';
+
+                        ++(*n_operands);
+
+                        strcpy(operand2, buffer);
+
+                        if(c == EOF)
+                                *line_status = ENDOFFILE_DETECTED;
+                        else if(c == '\n')
+                                *line_status = NEWLINE_DETECTED;
+                        else if(c == '\r')
+                                *line_status = CARRIAGERETURN_DETECTED;
+                        else if(c == ';')
+                                *line_status = COMMNTDELIM_DETECTED;
+                        else
+                                *line_status = NONE_DETECTED;
+                }
         }
 }
 
+/*
+uint8_t parse_operandtype(char *buffer, symboltable_t *symboltable_list,
+                          uint16_t *symboltable_currentsize) {
+        
+}
+*/

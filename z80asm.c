@@ -33,6 +33,8 @@ int main(int argc, char **argv) {
         loop_status_t loop_status;
         action_status_t action_status;
         program_status_t program_status;
+        status_t status;
+        uint16_t location_counter = 0;
 
         s_flag = err_flag = NOT_SET;
 
@@ -89,7 +91,10 @@ int main(int argc, char **argv) {
                 
                 switch(type) {
                 case INSTRUCTION:
-                        handle_instruction(sourcefile_handle, buffer, line_status);
+                        status = handle_instruction(sourcefile_handle, buffer,
+                                                    &line_status, instruction_set,
+                                                    &location_counter);
+
                         break;
 #ifdef j
                 case LABEL:
@@ -103,7 +108,9 @@ int main(int argc, char **argv) {
 
 #endif
                 }
+                goto_nextline(sourcefile_handle, line_status);
         }
+        
 
         free_symboltable(&symboltable_list);
         
