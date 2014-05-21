@@ -23,6 +23,12 @@ void init_symboltable(symboltable_t **symboltable_list, symboltable_t *defined_s
         if(*symboltable_list != NULL) {
                 while(defined_symbols[index].name != NULL) {
                         (*symboltable_list)[index].name = defined_symbols[index].name;
+                        (*symboltable_list)[index].operand_type =
+                                defined_symbols[index].operand_type;
+                        (*symboltable_list)[index].value =
+                                defined_symbols[index].value;
+                        (*symboltable_list)[index].value_status =
+                                defined_symbols[index].value_status;
                         ++index;
                         ++(*symboltable_currentsize);
                 }

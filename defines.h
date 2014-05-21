@@ -69,6 +69,7 @@
 #define ZERO_SET 23
 #define ZERO_NOTSET 24
 #define NONE 25
+#define INVALID_TYPE 255
 
 #define UNDEFINED 0
 #define DEFINED 1
@@ -83,6 +84,7 @@ typedef enum line_status_t {ENDOFFILE_DETECTED = 0, NEWLINE_DETECTED,
                             CARRIAGERETURN_DETECTED, COMMNTDELIM_DETECTED,
                             NONE_DETECTED} line_status_t;
 typedef enum status_t {ERROR = 0, NO_ERROR} status_t;
+typedef enum data_status_t {VALIDITY_UNKNOWN = 0, INVALID, VALID} data_status_t;
 
 typedef struct instruction_parameters_t {
         char *instruction_name;

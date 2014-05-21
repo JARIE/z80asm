@@ -26,7 +26,7 @@ int main(int argc, char **argv) {
         unsigned char index;
         enum flag_t {NOT_SET = 0, SET} s_flag, err_flag;
         word_type_t type;
-        uint16_t symboltable_currentsize = 0, symboltable_actualsize = 0;
+        uint8_t symboltable_currentsize = 0, symboltable_actualsize = 0;
         int16_t mainindex, subindex;
         
         line_status_t line_status;
@@ -93,7 +93,8 @@ int main(int argc, char **argv) {
                 case INSTRUCTION:
                         status = handle_instruction(sourcefile_handle, buffer,
                                                     &line_status, instruction_set,
-                                                    &location_counter);
+                                                    &location_counter, symboltable_list,
+                                                    &symboltable_currentsize);
 
                         break;
 #ifdef j
