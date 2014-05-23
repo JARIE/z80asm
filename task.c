@@ -15,18 +15,22 @@
 void init_symboltable(symboltable_t **symboltable_list, symboltable_t *defined_symbols,
                       uint16_t *symboltable_currentsize, uint16_t *symboltable_actualsize) {
         int index = 0;
-        *symboltable_list = malloc(30 * sizeof(**symboltable_list));
+        *symboltable_list = malloc(25 * sizeof(**symboltable_list));
 
         *symboltable_currentsize = 0;
-        *symboltable_actualsize = 30;
+        *symboltable_actualsize = 25;
 
         if(*symboltable_list != NULL) {
                 while(defined_symbols[index].name != NULL) {
                         (*symboltable_list)[index].name = defined_symbols[index].name;
                         (*symboltable_list)[index].operand_type =
                                 defined_symbols[index].operand_type;
-                        (*symboltable_list)[index].value =
-                                defined_symbols[index].value;
+                        (*symboltable_list)[index].value_nbytes =
+                                defined_symbols[index].value_nbytes;
+                        (*symboltable_list)[index].value[0] =
+                                defined_symbols[index].value[0];
+                        (*symboltable_list)[index].value[1] =
+                                defined_symbols[index].value[1];
                         (*symboltable_list)[index].value_status =
                                 defined_symbols[index].value_status;
                         ++index;

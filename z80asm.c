@@ -14,11 +14,6 @@
 #include "parse.h"
 #include "z80instructionset.h"
 
-#define STDERR(str, ...) fprintf(stderr, "error: " str, ##__VA_ARGS__)
-#define EFAILURE exit(EXIT_FAILURE);
-#define ESUCCESS exit(EXIT_SUCCESS);
-#define DEBUG(str, ...) fprintf(stdout, str, ##__VA_ARGS__)
-
 int main(int argc, char **argv) {
         FILE *sourcefile_handle;
         char *sourcefile_name, buffer[20];
@@ -93,8 +88,10 @@ int main(int argc, char **argv) {
                 case INSTRUCTION:
                         status = handle_instruction(sourcefile_handle, buffer,
                                                     &line_status, instruction_set,
-                                                    &location_counter, symboltable_list,
-                                                    &symboltable_currentsize);
+                                                    &location_counter, &symboltable_list,
+                                                    &symboltable_currentsize,
+                                                    &symboltable_actualsize);
+                        printf("the location counter value is %d\n", location_counter);
 
                         break;
 #ifdef j
@@ -111,7 +108,6 @@ int main(int argc, char **argv) {
                 }
                 goto_nextline(sourcefile_handle, line_status);
         }
-        
 
         free_symboltable(&symboltable_list);
         

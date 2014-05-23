@@ -4,12 +4,13 @@
 
 // Description:
 
-/* This file contains all the instructions organized in alphabetical order with additional
-   parameters for easy access when needed.  
+/* This file contains all the instructions organized in alphabetical order with
+   additional parameters for easy access when needed.  
 
    Note: RST p is not supported 
 
-   The binary code array has a one-to-one correspondence with the actual binary value array
+   The binary code array has a one-to-one correspondence with the actual binary value
+   array
 
    Binary Code:
 
@@ -20,14 +21,14 @@
              affected, 0b10 means 3 contiguous bits are afected, and 0b11 means 6
              continguous bits are affected.
              Note: This field is ignored if Bit 7:6 is 0b00 for no operands, meaning that
-             this byte code should not affect the corresponding binary value. In that case,
-             leave this field to zero.
+             this byte code should not affect the corresponding binary value. In that
+             case, leave this field to zero.
    Bit 3   - If Bit 5:4 is 0b00, then the definition of this field is as follows:
 
              '0' for when an 8-bit value is to be stored in the corresponding
              binary value and that this value makes up the whole value itself.
-             '1' for when an 8-bit value is to be stored in the corresponding binary value
-             and that this value is part of a 16-bit value.
+             '1' for when an 8-bit value is to be stored in the corresponding binary
+             value and that this value is part of a 16-bit value.
 
              If Bit 5:4 is 0b11, then the definition of this field is as follows:
 
@@ -52,8 +53,8 @@
                      - '1' for hight byte
 
              If Bit 7:6 is not 0b00 and Bit 5:4 is not 0b00 or 0b11, then these bits
-             dictate how far should the 2 or 3 continguous bits be shifted from the right.
-             Otherwise leave this field to zero.
+             dictate how far should the 2 or 3 continguous bits be shifted from the
+             right. Otherwise leave this field to zero.
 */
 
 #include "defines.h"
@@ -234,7 +235,7 @@ instruction_parameters_t i_instructions[] =
 
 instruction_parameters_t j_instructions[] =
 {
-        {"JP", 1, {VALUE_16_BIT, NONE}, 3, {0xC3, 0x00, 0x00, NA},
+        {"JP", 1, {MEMORY_16_BIT, NONE}, 3, {0xC3, 0x00, 0x00, NA},
          {NONE_AFFECTED, OP1 | ALLBITS | _16BITVAL | LBYTE, OP1 | ALLBITS |
           _16BITVAL | HBYTE, NA}},
         {"JP", 2, {CONDITION, VALUE_16_BIT}, 3, {0xC2, 0x00, 0x00, NA},
@@ -290,14 +291,14 @@ instruction_parameters_t l_instructions[] =
          {NONE_AFFECTED, NA, NA, NA}},
         {"LD", 2, {ACCUMULATOR, DE_REGISTER}, 1, {0x1A, NA, NA, NA},
          {NONE_AFFECTED, NA, NA, NA}},
-        {"LD", 2, {ACCUMULATOR, VALUE_16_BIT}, 3, {0x3A, 0x00, 0x00, NA},
+        {"LD", 2, {ACCUMULATOR, MEMORY_16_BIT}, 3, {0x3A, 0x00, 0x00, NA},
          {NONE_AFFECTED, OP2 | ALLBITS | _16BITVAL | LBYTE, OP2 | ALLBITS |
           _16BITVAL | HBYTE, NA}},
         {"LD", 2, {BC_REGISTER, ACCUMULATOR}, 1, {0x02, NA, NA, NA},
          {NONE_AFFECTED, NA, NA, NA}},
         {"LD", 2, {DE_REGISTER, ACCUMULATOR}, 1, {0x12, NA, NA, NA},
          {NONE_AFFECTED, NA, NA, NA}},
-        {"LD", 2, {VALUE_16_BIT, ACCUMULATOR}, 3, {0x32, 0x00, 0x00, NA},
+        {"LD", 2, {MEMORY_16_BIT, ACCUMULATOR}, 3, {0x32, 0x00, 0x00, NA},
          {NONE_AFFECTED, OP1 | ALLBITS | _16BITVAL | LBYTE, OP1 | ALLBITS |
           _16BITVAL | HBYTE, NA}},
         {"LD", 2, {ACCUMULATOR, INTVECT_REGISTER}, 2, {0xED, 0x57, NA, NA},
@@ -557,29 +558,30 @@ instruction_parameters_t *instruction_set[26] = {a_instructions, b_instructions,
                                                  NULL, x_instructions, NULL, NULL};
 
 symboltable_t z80_symbols[] = {
-        {"A", REGISTER_8_BIT, 7, DEFINED},
-        {"B", REGISTER_8_BIT, 0, DEFINED},
-        {"C", REGISTER_8_BIT, 1, DEFINED},
-        {"D", REGISTER_8_BIT, 2, DEFINED},
-        {"E", REGISTER_8_BIT, 3, DEFINED},
-        {"H", REGISTER_8_BIT, 4, DEFINED},
-        {"L", REGISTER_8_BIT, 5, DEFINED},
-        {"BC", REGISTER_16_BIT, 0, DEFINED},
-        {"DE", REGISTER_16_BIT, 1, DEFINED},
-        {"HL", REGISTER_16_BIT, 2, DEFINED},
-        {"SP", REGISTER_16_BIT, 3, DEFINED},
-        {"CC", CARRY_SET, NA, DEFINED},
-        {"NC", CARRY_NOTSET, NA, DEFINED},
-        {"Z", ZERO_SET, NA, DEFINED},
-        {"NZ", ZERO_NOTSET, NA, DEFINED},
-        {"$NZ", CONDITION, 0, DEFINED},
-        {"$Z", CONDITION, 1, DEFINED},
-        {"$NC", CONDITION, 2, DEFINED},
-        {"$C", CONDITION, 3, DEFINED},
-        {"$PO", CONDITION, 4, DEFINED},
-        {"$PE", CONDITION, 5, DEFINED},
-        {"$P", CONDITION, 6, DEFINED},
-        {"$M", CONDITION, 7, DEFINED},
+        {"ACCM", ACCUMULATOR, 0, {NA, NA}, DEFINED},
+        {"A", REGISTER_8_BIT, 1, {7, NA}, DEFINED},
+        {"B", REGISTER_8_BIT, 1, {0, NA}, DEFINED}, 
+        {"C", REGISTER_8_BIT, 1, {1, NA}, DEFINED},
+        {"D", REGISTER_8_BIT, 1, {2, NA}, DEFINED},
+        {"E", REGISTER_8_BIT, 1, {3, NA}, DEFINED},
+        {"H", REGISTER_8_BIT, 1, {4, NA}, DEFINED},
+        {"L", REGISTER_8_BIT, 1, {5, NA}, DEFINED},
+        {"BC", REGISTER_16_BIT, 1, {0, NA}, DEFINED},
+        {"DE", REGISTER_16_BIT, 1, {1, NA}, DEFINED},
+        {"HL", REGISTER_16_BIT, 1, {2, NA}, DEFINED},
+        {"SP", REGISTER_16_BIT, 1, {3, NA}, DEFINED},
+        {"CC", CARRY_SET, 0, {NA, NA}, DEFINED},
+        {"NC", CARRY_NOTSET, 0, {NA, NA}, DEFINED},
+        {"Z", ZERO_SET, 0, {NA, NA}, DEFINED},
+        {"NZ", ZERO_NOTSET, 0, {NA, NA}, DEFINED},
+        {"$NZ", CONDITION, 1, {0, NA}, DEFINED},
+         {"$Z", CONDITION, 1, {1, NA}, DEFINED},
+         {"$NC", CONDITION, 1, {2, NA}, DEFINED},
+         {"$C", CONDITION, 1, {3, NA}, DEFINED},
+         {"$PO", CONDITION, 1, {4, NA}, DEFINED},
+         {"$PE", CONDITION, 1, {5, NA}, DEFINED},
+         {"$P", CONDITION, 1, {6, NA}, DEFINED},
+         {"$M", CONDITION, 1, {7, NA}, DEFINED},
         {NULL, 0, 0, 0}
 };
 

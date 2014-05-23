@@ -8,6 +8,10 @@
 
 #include <stdint.h>
 
+#define STDERR(str, ...) fprintf(stderr, "error: " str, ##__VA_ARGS__)
+#define EFAILURE exit(EXIT_FAILURE);
+#define ESUCCESS exit(EXIT_SUCCESS);
+#define DEBUG(str, ...) fprintf(stdout, str, ##__VA_ARGS__)
 
 #ifndef DEFINES_H
 #define DEFINES_H
@@ -98,8 +102,9 @@ typedef struct instruction_parameters_t {
 typedef struct symboltable_t {
         char *name;
         uint8_t operand_type;
-        uint8_t value;
+        uint8_t value_nbytes;
+        uint8_t value[2];
         uint8_t value_status;
-} symboltable_t;
+} symboltable_t; 
 
 #endif
