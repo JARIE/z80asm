@@ -12,6 +12,7 @@
 #include "udgetopt.h"
 #include "defines.h"
 #include "parse.h"
+#include "task.h"
 #include "z80instructionset.h"
 
 int main(int argc, char **argv) {
