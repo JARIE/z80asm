@@ -101,7 +101,7 @@ typedef struct instruction_parameters_t {
 
 typedef struct symboltable_t {
         char *name;
-        uint8_t operand_type;
+        uint8_t value_type;
         uint8_t value_nbytes;
         uint8_t value[2];
         uint8_t value_status;

@@ -9,12 +9,12 @@
 #include "defines.h"
 #include "parse.h"
 
-status_t handle_instruction(FILE *file_handle, char *buffer,
-                            line_status_t *line_status,
-                            instruction_parameters_t **instruction_set,
-                            uint16_t *location_counter, symboltable_t **symboltable_list,
-                            uint8_t *symboltable_currentsize,
-                            uint8_t *symboltable_actualsize) {
+void parse_instruction(FILE *file_handle, char *buffer,
+                       line_status_t *line_status,
+                       instruction_parameters_t **instruction_set,
+                       uint16_t *location_counter, symboltable_t **symboltable_list,
+                       uint8_t symboltable_currentsize,
+                       char ***symbolstracked_list) {
         char *instruction, operand1[20], operand2[20];
         uint8_t operand1_type = NONE, operand2_type = NONE, n_operands;
         int c, mainindex, subindex;
@@ -35,25 +35,20 @@ status_t handle_instruction(FILE *file_handle, char *buffer,
                 if(n_operands == 0) {
                         operand1_type = NONE;
                         operand2_type = NONE;
-                        printf("no operands, %d, %d\n", operand1_type, operand2_type);
                 }
                 else if(n_operands == 1) {
-                        printf("%s\n", operand1);
                         operand1_type = parse_operandtype(operand1, symboltable_list,
                                                           symboltable_currentsize,
-                                                          symboltable_actualsize);
-                        operand2_type = NONE;
-                        printf("one operand, %d, %d\n", operand1_type, operand2_type); 
+                                                          symbolstracked_list);
+                        operand2_type = NONE; 
                 }
                 else { //n_operands == 2
-                        printf("%s %s\n", operand1, operand2);
                         operand1_type = parse_operandtype(operand1, symboltable_list,
                                                           symboltable_currentsize,
-                                                          symboltable_actualsize);
+                                                          symbolstracked_list);
                         operand2_type = parse_operandtype(operand2, symboltable_list,
                                                           symboltable_currentsize,
-                                                          symboltable_actualsize);
-                        printf("two operands, %d, %d\n", operand1_type, operand2_type);
+                                                          symbolstracked_list);
                 }
         }
 
@@ -69,8 +64,6 @@ status_t handle_instruction(FILE *file_handle, char *buffer,
                 *location_counter +=
                         instruction_set[mainindex][subindex].instruction_length;
         }
-        
-        return status;
 }
 
 void extract_operands(FILE *file_handle, char *operand1, char *operand2,
@@ -164,8 +157,8 @@ void extract_operands(FILE *file_handle, char *operand1, char *operand2,
 }
 
 uint8_t parse_operandtype(char *operand, symboltable_t **symboltable_list,
-                          uint8_t *symboltable_currentsize,
-                          uint8_t *symboltable_actualsize) {
+                          uint8_t symboltable_currentsize,
+                          char ***symbolstracked_list) {
         uint8_t operand_type;
         data_status_t data_status;
         uint8_t byte_length;
@@ -195,26 +188,18 @@ uint8_t parse_operandtype(char *operand, symboltable_t **symboltable_list,
 
         if(operand_type == NONE) {
                 data_status = testif_symbolexistent(operand, *symboltable_list,
-                                                    *symboltable_currentsize,
+                                                    symboltable_currentsize,
                                                     &operand_type);
 
-
                 if(data_status == INVALID) {
-                        /* This block is entered if the operand was not found in the
-                           symbol table. In this case it is safe to assume that it is
-                           a future reference symbol and that it is a 16-bit memory
-                           location. */
+                        data_status = checkif_symbolworthy(operand);
 
                         /* Must check if the symbol adheres to the rules of containing
-                           appropriate characters to be a valid symbol. */
-                        data_status = checkif_symbolworthy(operand);
+                           appropriate characters to be a valid symbol. */                
 
                         if(data_status == VALID) { //operand is symbol worthy
                                 operand_type = MEMORY_16_BIT;
-                                storein_symboltable(operand, operand_type,
-                                                    symboltable_list,
-                                                    symboltable_currentsize,
-                                                    symboltable_actualsize);
+                                //data_status = track_symbol(operand, symbolstracked_list);
                         }
                         else {
                                 operand_type = INVALID_TYPE;
@@ -247,20 +232,22 @@ data_status_t testif_memlocvalid(char* operand) {
         return data_status;
 }
 
-data_status_t testif_numvalid(char *operand, uint8_t *byte_length) {
+data_status_t testif_numvalid(char *buffer, uint8_t *byte_length) {
         data_status_t data_status;
         int index, boundary;
         uint16_t value = 0;
         uint8_t exponent;
 
-        index = strlen(operand) - 1;
+        index = strlen(buffer) - 1;
 
         data_status = VALID;
 
-        if(operand[index] == 'H' || operand[index] == 'h') {
-                boundary = strlen(operand) - 1;
+        if(buffer[index] == 'H' || buffer[index] == 'h') {
+                boundary = strlen(buffer) - 1;
                 for(index = 0; index < boundary; ++index)
-                        if(operand[index] < '0' || operand[index] > '9')
+                        if((buffer[index] < '0' || buffer[index] > '9') &&
+                           (buffer[index] < 'A' || buffer[index] > 'F') &&
+                           (buffer[index] < 'a' || buffer[index] > 'f'))
                                 data_status = INVALID;
 
                 if(data_status != INVALID) {
@@ -268,7 +255,7 @@ data_status_t testif_numvalid(char *operand, uint8_t *byte_length) {
                         boundary = 0;
                         exponent = 0;
                         for(; index >= boundary; --index) {
-                                value += (operand[index] - 48) * pow(16, exponent);
+                                value += (buffer[index] - 48) * pow(16, exponent);
                                 ++exponent;
                         }
 
@@ -281,9 +268,9 @@ data_status_t testif_numvalid(char *operand, uint8_t *byte_length) {
                 }
         }
         else {
-                boundary = strlen(operand);
+                boundary = strlen(buffer);
                 for(index = 0; index < boundary; ++index)
-                        if(operand[index] < '0' || operand[index] > '9')
+                        if(buffer[index] < '0' || buffer[index] > '9')
                                 data_status = INVALID;
 
                 if(data_status != INVALID) {
@@ -291,7 +278,7 @@ data_status_t testif_numvalid(char *operand, uint8_t *byte_length) {
                         boundary = 0;
                         exponent = 0;
                         for(; index >= boundary; --index) {
-                                value += (operand[index] - 48) * pow(10, exponent);
+                                value += (buffer[index] - 48) * pow(10, exponent);
                                 ++exponent;
                         }
 
@@ -317,7 +304,7 @@ data_status_t testif_symbolexistent(char *operand, symboltable_t *symboltable_li
 
         for(index = 0; index < symboltable_currentsize; ++index) {
                 if(!strcmp(symboltable_list[index].name, operand)) {
-                        *operand_type = symboltable_list[index].operand_type;
+                        *operand_type = symboltable_list[index].value_type;
                         data_status = VALID;                        
                 }
         }
@@ -356,51 +343,6 @@ data_status_t checkif_symbolworthy(char *operand) {
         return data_status;
 }
 
-void storein_symboltable(char *operand, uint8_t operand_type,
-                         symboltable_t **symboltable_list,
-                         uint8_t *symboltable_currentsize,
-                         uint8_t *symboltable_actualsize) {
-        symboltable_t *symboltable_newlist;
-        int index, size;
-
-
-        /* Firsts tests whether there are no more room in the symbol table. If there is
-           room to store a symbol then it is stored and the current size of the symbol
-           table is incremented. If there is no more room, then the size of the symbol
-           table is extended by a preset value to store the symbol as well as for future
-           symbols. */
-        if(*symboltable_currentsize == *symboltable_actualsize) {
-                symboltable_newlist = realloc(*symboltable_list,
-                                              (*symboltable_actualsize + 10) *
-                                              sizeof(*symboltable_newlist));
-
-
-                if(symboltable_newlist == NULL) {
-                        STDERR("could not extend the symbol table\n");
-                        EFAILURE;
-                }
-                else {
-                        *symboltable_list = symboltable_newlist;
-                        *symboltable_actualsize += 10;
-                }
-        }
-
-
-        index = (*symboltable_currentsize)++;
-        size = strlen(operand) + 1;
-        (*symboltable_list)[index].name = malloc(size *
-                                              sizeof(*((*symboltable_list)[index].name)));
-
-        if((*symboltable_list)[index].name == NULL) {
-                STDERR("storing symbol in the symbol table failed\n");
-                EFAILURE;
-        }
-        strcpy((*symboltable_list)[index].name, operand);
-        (*symboltable_list)[index].operand_type = operand_type;
-        (*symboltable_list)[index].value_nbytes = 2;
-        (*symboltable_list)[index].value_status = UNDEFINED;
-}
-
 data_status_t testif_instructionexistent(char *instruction,
                                          instruction_parameters_t **instruction_set,
                                          uint8_t operand1_type, uint8_t operand2_type,
@@ -436,3 +378,226 @@ data_status_t testif_instructionexistent(char *instruction,
 
         return data_status;
 }
+
+void handle_label(char *label, symboltable_t **symboltable_list,
+                  uint16_t location_counter, uint8_t *symboltable_currentsize,
+                  uint8_t *symboltable_actualsize) {
+        int index, mainindex;
+        uint8_t value[2];
+
+        label[(strlen(label) - 1)] = '\0';
+
+        value[0] = (uint8_t) location_counter;
+        value[1] = (uint8_t) (location_counter >> 8);
+
+        storein_symboltable(label, MEMORY_16_BIT, 2, value, symboltable_list,
+                            symboltable_currentsize, symboltable_actualsize);
+}
+
+void handle_directive(FILE *file_handle, char *directive, symboltable_t **symboltable_list,
+                      uint16_t *location_counter, uint8_t *symboltable_currentsize,
+                      uint8_t *symboltable_actualsize, line_status_t *line_status) {
+        status_t status;
+        char dir_arg1[20], dir_arg2[20];
+        data_status_t data_status, symbol_status, value_status;
+        uint8_t byte_length, value_type;
+        char value_toconvert[20];
+        uint8_t value[2];
+        int index, boundary;
+        uint8_t type;
+        
+        if(!strcmp("ORG", directive)) {
+                status = extract_dirarg(file_handle, 1, line_status,
+                                             dir_arg1, NULL);
+                data_status = testif_numvalid(dir_arg1, &byte_length);
+                if(data_status == VALID)
+                        *location_counter = asciistr_to16bitnum(dir_arg1);
+                else {
+                        free(*symboltable_list);
+                        STDERR("assigning invalid value to location counter\n");
+                        EFAILURE;
+                }
+        }
+
+        else if(!strcmp("EQU", directive)) {
+                status = extract_dirarg(file_handle, 2, line_status, dir_arg1, dir_arg2);
+                symbol_status = checkif_symbolworthy(dir_arg1);
+
+                if(symbol_status != VALID) {
+                        free(*symboltable_list);
+                        STDERR("invalid EQU symbol\n");
+                        EFAILURE;
+                }
+
+                value_status = parse_equvalue(dir_arg2, &type);
+                if(value_status == VALID) {
+                        if(type == MEMORY_16_BIT) {
+                                index = 1;
+                                boundary = strlen(dir_arg2) - 1;
+                                for(; index < boundary; ++index)
+                                        value_toconvert[index] = dir_arg2[index];
+                                value[0] = (uint8_t) asciistr_to16bitnum(value_toconvert);
+                                value[1] = (uint8_t)
+                                        (asciistr_to16bitnum(value_toconvert) >> 8);
+                                byte_length = 2;
+                        }
+                        else if(type == VALUE_16_BIT) {
+                                value[0] = (uint8_t) asciistr_to16bitnum(dir_arg2);
+                                value[1] = (uint8_t)
+                                        (asciistr_to16bitnum(dir_arg2) >> 8);
+                                byte_length = 2;
+                        }
+                        else {
+                                value[0] = (uint8_t) asciistr_to16bitnum(dir_arg2);
+                                byte_length = 1;
+                        }
+                        storein_symboltable(dir_arg1, type, byte_length, value,
+                                            symboltable_list, symboltable_currentsize,
+                                            symboltable_actualsize);
+                }
+                else {
+                        printf("hello");
+                }
+        }
+}
+
+status_t extract_dirarg(FILE *file_handle, uint8_t extract_ndirargs,
+                          line_status_t *line_status, char *dir_arg1, char *dir_arg2) {
+        int index, c;
+        char buffer[20];
+        status_t status;
+        uint8_t byte_length;
+
+        do {
+                c = fgetc(file_handle);
+        } while(c != EOF && (c == ' ' || c == '\t'));
+
+        if(c == EOF || c== '\n' || c== '\r' || c == ';') {
+                status = ERROR;
+        }
+        else {
+                index = 0;
+                do {
+                        buffer[index++] = c;
+                        c = fgetc(file_handle);
+                } while(c != EOF && c != ' ' && c != '\t' && c != '\n' && c != '\r' &&
+                        c != ';');
+                buffer[index] = '\0';
+
+                status = NO_ERROR;
+                strcpy(dir_arg1, buffer);
+
+                if(c == EOF)
+                        *line_status = ENDOFFILE_DETECTED;
+                else if(c == '\n')
+                        *line_status = NEWLINE_DETECTED;
+                else if(c == '\r')
+                        *line_status = CARRIAGERETURN_DETECTED;
+                else if(c == ';')
+                        *line_status = COMMNTDELIM_DETECTED;
+                else
+                        *line_status = NONE_DETECTED;
+        }
+
+        if(status == NO_ERROR) {
+                if(extract_ndirargs == 2) {
+                        do {
+                                c = fgetc(file_handle);
+                        } while(c != EOF && (c == ' ' || c == '\t'));
+
+                        if(c == EOF || c == '\n' || c == '\r' || c == ';') {
+                                status = ERROR;
+                        }
+                        else {
+                                index = 0;
+                                do {
+                                        buffer[index++] = c;
+                                        c = fgetc(file_handle);
+                                } while(c != EOF && c != ' ' && c != '\t' && c != '\n' &&
+                                        c != '\r' && c != ';');
+                                buffer[index] = '\0';
+
+                                status = NO_ERROR;
+                                strcpy(dir_arg2, buffer);
+
+                                if(c == EOF)
+                                        *line_status = ENDOFFILE_DETECTED;
+                                else if(c == '\n')
+                                        *line_status = NEWLINE_DETECTED;
+                                else if(c == '\r')
+                                        *line_status = CARRIAGERETURN_DETECTED;
+                                else if(c == ';')
+                                        *line_status = COMMNTDELIM_DETECTED;
+                                else
+                                        *line_status = NONE_DETECTED;
+                        }
+                }
+                else {
+                        status = NO_ERROR;
+                }
+        }
+        return status;
+}
+
+data_status_t parse_equvalue(char *value, uint8_t *type) {
+        int index;
+        data_status_t value_status;
+        uint8_t byte_length;
+
+        index = strlen(value) - 1;
+
+        value_status = VALIDITY_UNKNOWN;
+
+        if(value[0] == '(' && value[index] == ')') {
+                value_status = testif_memlocvalid(value);
+
+                if(value_status == VALID) 
+                        *type = MEMORY_16_BIT;
+        }
+
+        if(value_status != VALID) {
+                value_status = testif_numvalid(value, &byte_length);
+
+                if(value_status == VALID) 
+                        if(byte_length == 1)
+                                *type = VALUE_8_BIT;
+                        else
+                                *type = VALUE_16_BIT;
+        }
+
+        return value_status;
+}
+
+
+#ifdef jar
+data_status_t track_symbol(char *symbol, char ***symbolstracked_list,
+                           uint8_t *symbolstracked_currentsize,
+                           uint8_t *symbolstracked_actualsize) {
+        int index;
+        enum symbol_status_t {NOT_FOUND = 0, FOUND} symbol_status;
+        char **symbolstracked_newlist;
+        data_status_t data_status;
+
+        symbol_status = NOT_FOUND;
+        
+        for(index = 0; index < *symbolstracked_currentsize; ++index) {
+                if(!strcmp((*symbolstracked_list)[index], symbol))
+                        symbol_status = FOUND;
+        }
+
+        if(symbol_status == NOT_FOUND) {
+                if(*symbolstracked_currentsize == *symbolstracked_actualsize) {
+                        symbolstracked_newlist = realloc(*symbolstracked_list,
+                                (*symbolstracked_actualsize + 10) *
+                                                         sizeof(*symbolstracked_newlist));
+                        if(symbolstracked_newlist == NULL)
+                                data_status = INVALID;
+                        else {
+                                *symbolstracked_list = symbolstracked_newlist;
+                                *symbolstracked_actualsize += 10;
+                        }
+                }
+                
+        }
+}
+#endif

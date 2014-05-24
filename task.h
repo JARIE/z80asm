@@ -21,5 +21,11 @@ program_status_t extract_nearestword(FILE *file_handle, char *buffer,
 
 word_type_t parse_wordtype(const char *buffer, instruction_parameters_t **instruction_set);
 
+void storein_symboltable(char *entry, uint8_t entry_type, uint8_t entry_nbytes,
+                         uint8_t entry_value[], symboltable_t **symboltable_list,
+                         uint8_t *symboltable_currentsize,
+                         uint8_t *symboltable_actualsize);
+
+uint16_t asciistr_to16bitnum(char *buffer);
 
 #endif

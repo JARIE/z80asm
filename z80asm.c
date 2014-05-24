@@ -31,6 +31,7 @@ int main(int argc, char **argv) {
         program_status_t program_status;
         status_t status;
         uint16_t location_counter = 0;
+        char **symbolstracked_list;
 
         s_flag = err_flag = NOT_SET;
 
@@ -78,6 +79,15 @@ int main(int argc, char **argv) {
                 EFAILURE;
         }
 
+        for(index = 0; index < symboltable_currentsize; ++index) {
+                printf("%s %d %d %d %d %d\n", symboltable_list[index].name,
+                       symboltable_list[index].value_type,
+                       symboltable_list[index].value_nbytes,
+                       symboltable_list[index].value[0],
+                       symboltable_list[index].value[1],
+                       symboltable_list[index].value_status);
+        }
+        
         program_status = PARSE_SOURCEFILE;
 
         while(extract_nearestword(sourcefile_handle, buffer, 20,
@@ -87,27 +97,40 @@ int main(int argc, char **argv) {
                 
                 switch(type) {
                 case INSTRUCTION:
-                        status = handle_instruction(sourcefile_handle, buffer,
-                                                    &line_status, instruction_set,
-                                                    &location_counter, &symboltable_list,
-                                                    &symboltable_currentsize,
-                                                    &symboltable_actualsize);
+                        parse_instruction(sourcefile_handle, buffer,
+                                          &line_status, instruction_set,
+                                          &location_counter, &symboltable_list,
+                                          symboltable_currentsize,
+                                          &symbolstracked_list);
                         printf("the location counter value is %d\n", location_counter);
 
                         break;
-#ifdef j
                 case LABEL:
-                        handle_label();
+                        handle_label(buffer, &symboltable_list,
+                                     location_counter, &symboltable_currentsize,
+                                     &symboltable_actualsize);
                         break;
                 case DIRECTIVE:
-                        handle_directive();
+                        handle_directive(sourcefile_handle, buffer, &symboltable_list,
+                                         &location_counter, &symboltable_currentsize,
+                                         &symboltable_actualsize, &line_status);
                         break;
+#ifdef j
                 case UNKNOWN:
                         break;
 
 #endif
                 }
                 goto_nextline(sourcefile_handle, line_status);
+        }
+
+        for(index = 0; index < symboltable_currentsize; ++index) {
+                printf("%s %d %d %d %d %d\n", symboltable_list[index].name,
+                       symboltable_list[index].value_type,
+                       symboltable_list[index].value_nbytes,
+                       symboltable_list[index].value[0],
+                       symboltable_list[index].value[1],
+                       symboltable_list[index].value_status);
         }
 
         free_symboltable(&symboltable_list);
