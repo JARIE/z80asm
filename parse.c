@@ -14,7 +14,8 @@ void parse_instruction(FILE *file_handle, char *buffer,
                        instruction_parameters_t **instruction_set,
                        uint16_t *location_counter, symboltable_t **symboltable_list,
                        uint8_t symboltable_currentsize,
-                       char ***symbolstracked_list) {
+                       char ***symbolstracked_list, uint8_t *symbolstracked_currentsize,
+                       uint8_t *symbolstracked_actualsize) {
         char *instruction, operand1[20], operand2[20];
         uint8_t operand1_type = NONE, operand2_type = NONE, n_operands;
         int c, mainindex, subindex;
@@ -39,22 +40,30 @@ void parse_instruction(FILE *file_handle, char *buffer,
                 else if(n_operands == 1) {
                         operand1_type = parse_operandtype(operand1, symboltable_list,
                                                           symboltable_currentsize,
-                                                          symbolstracked_list);
+                                                          symbolstracked_list,
+                                                          symbolstracked_currentsize,
+                                                          symbolstracked_actualsize);
                         operand2_type = NONE; 
                 }
                 else { //n_operands == 2
                         operand1_type = parse_operandtype(operand1, symboltable_list,
                                                           symboltable_currentsize,
-                                                          symbolstracked_list);
+                                                          symbolstracked_list,
+                                                          symbolstracked_currentsize,
+                                                          symbolstracked_actualsize);
                         operand2_type = parse_operandtype(operand2, symboltable_list,
                                                           symboltable_currentsize,
-                                                          symbolstracked_list);
+                                                          symbolstracked_list,
+                                                          symbolstracked_currentsize,
+                                                          symbolstracked_actualsize);
                 }
         }
 
         data_status = testif_instructionexistent(instruction, instruction_set,
                                                  operand1_type, operand2_type,
                                                  &mainindex, &subindex);
+
+        printf("%d %d\n", operand1_type, operand2_type);
 
         if(data_status != VALID) {
                 STDERR("invalid operands detected");
@@ -158,7 +167,9 @@ void extract_operands(FILE *file_handle, char *operand1, char *operand2,
 
 uint8_t parse_operandtype(char *operand, symboltable_t **symboltable_list,
                           uint8_t symboltable_currentsize,
-                          char ***symbolstracked_list) {
+                          char ***symbolstracked_list,
+                          uint8_t *symbolstracked_currentsize,
+                          uint8_t *symbolstracked_actualsize) {
         uint8_t operand_type;
         data_status_t data_status;
         uint8_t byte_length;
@@ -199,7 +210,16 @@ uint8_t parse_operandtype(char *operand, symboltable_t **symboltable_list,
 
                         if(data_status == VALID) { //operand is symbol worthy
                                 operand_type = MEMORY_16_BIT;
-                                //data_status = track_symbol(operand, symbolstracked_list);
+                                data_status = track_symbol(operand, symbolstracked_list,
+                                                           symbolstracked_currentsize,
+                                                           symbolstracked_actualsize);
+                                if(data_status == INVALID) {
+                                        free(*symboltable_list);
+                                        free(*symbolstracked_list);
+                                        STDERR("symbols could not be tracked\n");
+                                        EFAILURE;
+                                }
+                  
                         }
                         else {
                                 operand_type = INVALID_TYPE;
@@ -294,17 +314,17 @@ data_status_t testif_numvalid(char *buffer, uint8_t *byte_length) {
         return data_status;
 }
 
-data_status_t testif_symbolexistent(char *operand, symboltable_t *symboltable_list,
+data_status_t testif_symbolexistent(char *symbol, symboltable_t *symboltable_list,
                                     uint8_t symboltable_currentsize,
-                                    uint8_t *operand_type) {
+                                    uint8_t *type) {
         int index;
         data_status_t data_status;
 
         data_status = VALIDITY_UNKNOWN;
 
         for(index = 0; index < symboltable_currentsize; ++index) {
-                if(!strcmp(symboltable_list[index].name, operand)) {
-                        *operand_type = symboltable_list[index].value_type;
+                if(!strcmp(symboltable_list[index].name, symbol)) {
+                        *type = symboltable_list[index].value_type;
                         data_status = VALID;                        
                 }
         }
@@ -456,7 +476,23 @@ void handle_directive(FILE *file_handle, char *directive, symboltable_t **symbol
                                             symboltable_actualsize);
                 }
                 else {
-                        printf("hello");
+                        data_status = testif_symbolexistent(dir_arg2,
+                                                            *symboltable_list,
+                                                            *symboltable_currentsize,
+                                                            &type);
+                        
+                        if(data_status == VALID) {
+                                get_symbolparams(dir_arg2, *symboltable_list,
+                                                 *symboltable_currentsize,
+                                                 &byte_length, value);
+                                storein_symboltable(dir_arg1, type, byte_length,
+                                                    value, symboltable_list,
+                                                    symboltable_currentsize,
+                                                    symboltable_actualsize);
+                        }
+                        else {
+                                STDERR("could not store symbol\n");
+                        }
                 }
         }
 }
@@ -568,12 +604,10 @@ data_status_t parse_equvalue(char *value, uint8_t *type) {
         return value_status;
 }
 
-
-#ifdef jar
 data_status_t track_symbol(char *symbol, char ***symbolstracked_list,
                            uint8_t *symbolstracked_currentsize,
                            uint8_t *symbolstracked_actualsize) {
-        int index;
+        int index, size;
         enum symbol_status_t {NOT_FOUND = 0, FOUND} symbol_status;
         char **symbolstracked_newlist;
         data_status_t data_status;
@@ -589,7 +623,7 @@ data_status_t track_symbol(char *symbol, char ***symbolstracked_list,
                 if(*symbolstracked_currentsize == *symbolstracked_actualsize) {
                         symbolstracked_newlist = realloc(*symbolstracked_list,
                                 (*symbolstracked_actualsize + 10) *
-                                                         sizeof(*symbolstracked_newlist));
+                                                       sizeof(*symbolstracked_newlist));
                         if(symbolstracked_newlist == NULL)
                                 data_status = INVALID;
                         else {
@@ -597,7 +631,57 @@ data_status_t track_symbol(char *symbol, char ***symbolstracked_list,
                                 *symbolstracked_actualsize += 10;
                         }
                 }
-                
+
+                index = (*symbolstracked_currentsize)++;
+
+                size = strlen(symbol) + 1;
+
+                (*symbolstracked_list)[index] = malloc(size *
+                                               sizeof(*((*symbolstracked_list)[index])));
+
+                if((*symbolstracked_list)[index] == NULL)
+                        data_status = INVALID;
+                else {
+                        strcpy((*symbolstracked_list)[index], symbol);
+                }
+        }
+        return data_status;
+}
+
+status_t validate_symbolstracked(char **symbolstracked_list,
+                                 symboltable_t *symboltable_list,
+                                 uint8_t symbolstracked_currentsize,
+                                 uint8_t symboltable_currentsize) {
+        int index1, index2;
+        status_t status;
+        data_status_t data_status;
+
+        status = NO_ERROR;
+        
+        for(index1 = 0; index1 < symbolstracked_currentsize; ++index1) {
+                data_status = INVALID;
+                for(index2 = 0; index2 < symboltable_currentsize; ++index2) {
+                        if(!strcmp(symboltable_list[index2].name,
+                                   symbolstracked_list[index1]))
+                                data_status = VALID;
+                }
+                if(data_status != VALID)
+                        status = ERROR;
+        }
+        return status;
+}
+
+void get_symbolparams(char *symbol, symboltable_t *symboltable_list,
+                      uint8_t symboltable_currentsize,
+                      uint8_t *byte_length, uint8_t value[]) {
+        int index1, index2;
+
+        for(index1 = 0; index1 < symboltable_currentsize; ++index1) {
+                if(!strcmp(symbol, symboltable_list[index1].name)) {
+                        *byte_length = symboltable_list[index1].value_nbytes;
+                        for(index2 = 0; index2 < *byte_length; ++ index2)
+                                value[index2] = symboltable_list[index1].value[index2];
+                }
         }
 }
-#endif
+

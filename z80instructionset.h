@@ -198,13 +198,13 @@ instruction_parameters_t h_instructions[] =
 
 instruction_parameters_t i_instructions[] = 
 {
-        {"INC", 1, {REGISTER_8_BIT, NA}, 1, {0x04, NA, NA, NA},
+        {"INC", 1, {REGISTER_8_BIT, NONE}, 1, {0x04, NA, NA, NA},
          {OP1 | _3BITS | SHIFT_3X, NA, NA, NA}},
-        {"INC", 1, {HL_REGISTER, NA}, 1, {0x34, NA, NA, NA},
+        {"INC", 1, {HL_REGISTER, NONE}, 1, {0x34, NA, NA, NA},
          {NONE_AFFECTED, NA, NA, NA}},
-        {"INC", 1, {IX_REGISTER_WOFFSET, NA}, 3, {0xDD, 0x34, 0x00, NA},
+        {"INC", 1, {IX_REGISTER_WOFFSET, NONE}, 3, {0xDD, 0x34, 0x00, NA},
          {NONE_AFFECTED, NONE_AFFECTED, OP1 | ALLBITS | _8BITVAL, NA}},
-        {"INC", 1, {IY_REGISTER_WOFFSET, NA}, 3, {0xFD, 0x34, 0x00, NA},
+        {"INC", 1, {IY_REGISTER_WOFFSET, NONE}, 3, {0xFD, 0x34, 0x00, NA},
          {NONE_AFFECTED, NONE_AFFECTED, OP1 | ALLBITS | _8BITVAL, NA}},
         {"IM0", 0, {NONE, NONE}, 2, {0xED, 0x46, NA, NA},
          {NONE_AFFECTED, NONE_AFFECTED, NA, NA}},
@@ -238,7 +238,7 @@ instruction_parameters_t j_instructions[] =
         {"JP", 1, {MEMORY_16_BIT, NONE}, 3, {0xC3, 0x00, 0x00, NA},
          {NONE_AFFECTED, OP1 | ALLBITS | _16BITVAL | LBYTE, OP1 | ALLBITS |
           _16BITVAL | HBYTE, NA}},
-        {"JP", 2, {CONDITION, VALUE_16_BIT}, 3, {0xC2, 0x00, 0x00, NA},
+        {"JP", 2, {CONDITION, MEMORY_16_BIT}, 3, {0xC2, 0x00, 0x00, NA},
          {OP1 | _3BITS | SHIFT_3X, OP2 | ALLBITS | _16BITVAL | LBYTE, OP2 | ALLBITS |
           _16BITVAL | HBYTE, NA}},
         {"JR", 1, {VALUE_8_BIT, NONE}, 2, {0x18, 0x00, NA, NA},
@@ -575,13 +575,13 @@ symboltable_t z80_symbols[] = {
         {"Z", ZERO_SET, 0, {NA, NA}, DEFINED},
         {"NZ", ZERO_NOTSET, 0, {NA, NA}, DEFINED},
         {"$NZ", CONDITION, 1, {0, NA}, DEFINED},
-         {"$Z", CONDITION, 1, {1, NA}, DEFINED},
-         {"$NC", CONDITION, 1, {2, NA}, DEFINED},
-         {"$C", CONDITION, 1, {3, NA}, DEFINED},
-         {"$PO", CONDITION, 1, {4, NA}, DEFINED},
-         {"$PE", CONDITION, 1, {5, NA}, DEFINED},
-         {"$P", CONDITION, 1, {6, NA}, DEFINED},
-         {"$M", CONDITION, 1, {7, NA}, DEFINED},
+        {"$Z", CONDITION, 1, {1, NA}, DEFINED},
+        {"$NC", CONDITION, 1, {2, NA}, DEFINED},
+        {"$C", CONDITION, 1, {3, NA}, DEFINED},
+        {"$PO", CONDITION, 1, {4, NA}, DEFINED},
+        {"$PE", CONDITION, 1, {5, NA}, DEFINED},
+        {"$P", CONDITION, 1, {6, NA}, DEFINED},
+        {"$M", CONDITION, 1, {7, NA}, DEFINED},
         {NULL, 0, 0, 0}
 };
 

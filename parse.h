@@ -20,14 +20,18 @@ void parse_instruction(FILE *file_handle, char *buffer,
                        uint16_t *location_counter,
                        symboltable_t **symboltable_list,
                        uint8_t symboltable_currentsize,
-                       char ***symbolstracked_list);
+                       char ***symbolstracked_list,
+                       uint8_t *symbolstracked_currentsize,
+                       uint8_t *symbolstracked_actualsize);
 
 void extract_operands(FILE *file_handle, char *operand1, char *operand2,
                       line_status_t *line_status, uint8_t *n_operands);
 
 uint8_t parse_operandtype(char *operand, symboltable_t **symboltable_list,
                           uint8_t symboltable_currentsize,
-                          char ***symbolstracked_list); 
+                          char ***symbolstracked_list,
+                          uint8_t *symbolstracked_currentzie,
+                          uint8_t *symbolstracked_actualsize); 
 
 data_status_t testif_memlocvalid(char *operand);
 
@@ -57,6 +61,17 @@ status_t extract_dirarg(FILE *file_handle, uint8_t extract_ndirargs,
 
 data_status_t parse_equvalue(char *value, uint8_t *type);
 
-data_status_t track_symbol(char *symbol, char ***symbolstracked_list);
+data_status_t track_symbol(char *symbol, char ***symbolstracked_list,
+                           uint8_t *symbolstracked_currentsize,
+                           uint8_t *symbolstracked_actualsize);
+
+status_t validate_symbolstracked(char **symbolstracked_list,
+                                 symboltable_t *symboltable_list,
+                                 uint8_t symbolstracked_currentsize,
+                                 uint8_t symboltable_currentsize);
+
+void get_symbolparams(char *symbol, symboltable_t *symboltable_list,
+                      uint8_t symboltable_currentsize,
+                      uint8_t *byte_length, uint8_t value[]);
 
 #endif

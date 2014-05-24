@@ -31,7 +31,8 @@ int main(int argc, char **argv) {
         program_status_t program_status;
         status_t status;
         uint16_t location_counter = 0;
-        char **symbolstracked_list;
+        char **symbolstracked_list = NULL;
+        uint8_t symbolstracked_currentsize = 0, symbolstracked_actualsize = 0;
 
         s_flag = err_flag = NOT_SET;
 
@@ -101,7 +102,9 @@ int main(int argc, char **argv) {
                                           &line_status, instruction_set,
                                           &location_counter, &symboltable_list,
                                           symboltable_currentsize,
-                                          &symbolstracked_list);
+                                          &symbolstracked_list,
+                                          &symbolstracked_currentsize,
+                                          &symbolstracked_actualsize);
                         printf("the location counter value is %d\n", location_counter);
 
                         break;
@@ -124,6 +127,12 @@ int main(int argc, char **argv) {
                 goto_nextline(sourcefile_handle, line_status);
         }
 
+        status = validate_symbolstracked(symbolstracked_list, symboltable_list,
+                                         symbolstracked_currentsize,
+                                         symboltable_currentsize);
+        if(status == ERROR)
+                STDERR("an invalid symbol was found as an operand\n");
+
         for(index = 0; index < symboltable_currentsize; ++index) {
                 printf("%s %d %d %d %d %d\n", symboltable_list[index].name,
                        symboltable_list[index].value_type,
@@ -133,7 +142,11 @@ int main(int argc, char **argv) {
                        symboltable_list[index].value_status);
         }
 
+        for(index = 0; index < symbolstracked_currentsize; ++index)
+                printf("%s is tracked\n", symbolstracked_list[index]);
+
         free_symboltable(&symboltable_list);
+        free(symbolstracked_list);
         
 
         if((fclose(sourcefile_handle)) == EOF) {
