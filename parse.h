@@ -24,8 +24,7 @@ void parse_instruction(FILE *file_handle, char *buffer,
                        uint8_t *symbolstracked_currentsize,
                        uint8_t *symbolstracked_actualsize);
 
-void extract_operands(FILE *file_handle, char *operand1, char *operand2,
-                      line_status_t *line_status, uint8_t *n_operands);
+
 
 uint8_t parse_operandtype(char *operand, symboltable_t **symboltable_list,
                           uint8_t symboltable_currentsize,
@@ -35,7 +34,7 @@ uint8_t parse_operandtype(char *operand, symboltable_t **symboltable_list,
 
 data_status_t testif_memlocvalid(char *operand);
 
-data_status_t testif_numvalid(char *operand, uint8_t *byte_length);
+
 
 data_status_t testif_symbolexistent(char *operand, symboltable_t *symboltable_list,
                                     uint8_t symboltable_currentsize,

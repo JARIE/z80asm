@@ -81,8 +81,8 @@
 typedef enum loop_status_t {EXIT = 0, CONTINUE} loop_status_t;
 typedef enum action_status_t{STOP_ACTION = 0, LOOKFOR_NONWHITESPACE,
                              BEGIN_PARSING} action_status_t;
-typedef enum program_status_t {PARSE_SOURCEFILE = 0,
-                               ASSEMBLE_OUTPUTFILE} program_status_t;
+typedef enum program_status_t {CONTINUE_PARSE = 0,
+                               STOP_PARSE} program_status_t;
 typedef enum word_type_t {UNKNOWN = 0, LABEL, DIRECTIVE, INSTRUCTION} word_type_t;
 typedef enum line_status_t {ENDOFFILE_DETECTED = 0, NEWLINE_DETECTED,
                             CARRIAGERETURN_DETECTED, COMMNTDELIM_DETECTED,

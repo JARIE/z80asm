@@ -28,4 +28,9 @@ void storein_symboltable(char *entry, uint8_t entry_type, uint8_t entry_nbytes,
 
 uint16_t asciistr_to16bitnum(char *buffer);
 
+void extract_operands(FILE *file_handle, char *operand1, char *operand2,
+                      line_status_t *line_status, uint8_t *n_operands);
+
+data_status_t testif_numvalid(char *operand, uint8_t *byte_length);
+
 #endif

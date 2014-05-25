@@ -14,7 +14,7 @@
 #include "defines.h"
 
 void init_symboltable(symboltable_t **symboltable_list, symboltable_t *defined_symbols,
-                      uint8_t *symboltable_currentsize, uint8_t *symboltable_actualsize) {
+                     uint8_t *symboltable_currentsize, uint8_t *symboltable_actualsize) {
         int index = 0;
         *symboltable_list = malloc(25 * sizeof(**symboltable_list));
 
@@ -110,11 +110,11 @@ program_status_t extract_nearestword(FILE *file_handle, char *buffer,
                         *line_status = NEWLINE_DETECTED;
                 else if(c == '\r')
                         *line_status = CARRIAGERETURN_DETECTED;
-                program_status = PARSE_SOURCEFILE;
+                program_status = CONTINUE_PARSE;
                 break;
         case STOP_ACTION:
                 *line_status = ENDOFFILE_DETECTED;
-                program_status = ASSEMBLE_OUTPUTFILE;
+                program_status = STOP_PARSE;
                 break;
         }
         
@@ -126,6 +126,8 @@ word_type_t parse_wordtype(const char *buffer,
         word_type_t word_type = UNKNOWN;
         int index1, index2;
 
+        if(buffer[0] < 'A' || buffer[0] > 'Z')
+                return word_type;
 
         if(buffer[(strlen(buffer)) - 1] == ':') {
                 word_type = LABEL;
@@ -143,7 +145,7 @@ word_type_t parse_wordtype(const char *buffer,
                 if(instruction_set[index1] != NULL) {
                         while(instruction_set[index1][index2].instruction_name !=
                               NULL) {
-                               if(!strcmp(instruction_set[index1][index2].instruction_name,
+                             if(!strcmp(instruction_set[index1][index2].instruction_name,
                                            buffer)) {
                                         word_type = INSTRUCTION;
                                 }
@@ -151,7 +153,6 @@ word_type_t parse_wordtype(const char *buffer,
                         }
                 }
         }
-        
         return word_type;
 }
 
@@ -214,7 +215,7 @@ void storein_symboltable(char *entry, uint8_t entry_type, uint8_t entry_nbytes,
                 index = (*symboltable_currentsize)++;
                 size = strlen(entry) + 1;
                 (*symboltable_list)[index].name = malloc(size *
-                                              sizeof(*((*symboltable_list)[index].name)));
+                                             sizeof(*((*symboltable_list)[index].name)));
                 if((*symboltable_list)[index].name == NULL) {
                         free(*symboltable_list);
                         STDERR("could not allocate space to store the symbol \"%s\"\n",
@@ -271,8 +272,157 @@ uint16_t asciistr_to16bitnum(char *buffer) {
                 }
         }
 
-
-
         return value;
 }
 
+void extract_operands(FILE *file_handle, char *operand1, char *operand2,
+                      line_status_t *line_status, uint8_t *n_operands) {
+        int c, index;
+        char buffer[20];
+
+        do {
+                c = fgetc(file_handle);
+        } while(c != EOF && (c == ' ' || c == '\t'));
+
+        if(c == EOF || c == '\n' || c == '\r' || c == ';') {
+                *n_operands = 0;
+                
+                if(c == EOF)
+                        *line_status = ENDOFFILE_DETECTED;
+                else if(c == '\n')
+                        *line_status = NEWLINE_DETECTED;
+                else if(c == '\r')
+                        *line_status = CARRIAGERETURN_DETECTED;
+                else
+                        *line_status = COMMNTDELIM_DETECTED;
+        }
+        else {
+                index = 0;
+                do {
+                        buffer[index++] = c;
+                        c = fgetc(file_handle);
+                } while(c != EOF && c != ' ' && c != '\t' && c != '\n' && c != '\r' &&
+                        c != ';');
+                buffer[index] = '\0';
+
+                *n_operands = 1;
+
+                if(c == EOF)
+                        *line_status = ENDOFFILE_DETECTED;
+                else if(c == '\n')
+                        *line_status = NEWLINE_DETECTED;
+                else if(c == '\r')
+                        *line_status = CARRIAGERETURN_DETECTED;
+                else if(c == ';')
+                        *line_status = COMMNTDELIM_DETECTED;
+                else
+                        *line_status = NONE_DETECTED;
+
+                strcpy(operand1, buffer);
+        }
+
+        index = strlen(buffer) - 1;
+
+        if(*line_status == NONE_DETECTED && buffer[index] == ',') {
+                operand1[index] = '\0';
+                
+                do {
+                        c = fgetc(file_handle);
+                } while(c != EOF && (c == ' ' || c == '\t'));
+
+                if(c == EOF)
+                        *line_status = ENDOFFILE_DETECTED;
+                else if(c == '\n')
+                        *line_status = NEWLINE_DETECTED;
+                else if(c == '\r')
+                        *line_status = CARRIAGERETURN_DETECTED;
+                else if(c == ';')
+                        *line_status = COMMNTDELIM_DETECTED;
+                else {
+                        index = 0;
+                        do {
+                                buffer[index++] = c;
+                                c = fgetc(file_handle);
+                        } while(c != EOF && c != ' ' && c != '\t' && c != '\n' &&
+                                c != '\r' && c != ';');
+                        buffer[index] = '\0';
+
+                        ++(*n_operands);
+
+                        strcpy(operand2, buffer);
+
+                        if(c == EOF)
+                                *line_status = ENDOFFILE_DETECTED;
+                        else if(c == '\n')
+                                *line_status = NEWLINE_DETECTED;
+                        else if(c == '\r')
+                                *line_status = CARRIAGERETURN_DETECTED;
+                        else if(c == ';')
+                                *line_status = COMMNTDELIM_DETECTED;
+                        else
+                                *line_status = NONE_DETECTED;
+                }
+        }
+}
+
+data_status_t testif_numvalid(char *buffer, uint8_t *byte_length) {
+        data_status_t data_status;
+        int index, boundary;
+        uint16_t value = 0;
+        uint8_t exponent;
+
+        index = strlen(buffer) - 1;
+
+        data_status = VALID;
+
+        if(buffer[index] == 'H' || buffer[index] == 'h') {
+                boundary = strlen(buffer) - 1;
+                for(index = 0; index < boundary; ++index)
+                        if((buffer[index] < '0' || buffer[index] > '9') &&
+                           (buffer[index] < 'A' || buffer[index] > 'F') &&
+                           (buffer[index] < 'a' || buffer[index] > 'f'))
+                                data_status = INVALID;
+
+                if(data_status != INVALID) {
+                        index = boundary - 1;
+                        boundary = 0;
+                        exponent = 0;
+                        for(; index >= boundary; --index) {
+                                value += (buffer[index] - 48) * pow(16, exponent);
+                                ++exponent;
+                        }
+
+                        if(value < 256)
+                                *byte_length = 1;
+                        else
+                                *byte_length = 2;
+
+                        data_status = VALID;
+                }
+        }
+        else {
+                boundary = strlen(buffer);
+                for(index = 0; index < boundary; ++index)
+                        if(buffer[index] < '0' || buffer[index] > '9')
+                                data_status = INVALID;
+
+                if(data_status != INVALID) {
+                        index = boundary - 1;
+                        boundary = 0;
+                        exponent = 0;
+                        for(; index >= boundary; --index) {
+                                value += (buffer[index] - 48) * pow(10, exponent);
+                                ++exponent;
+                        }
+
+                        if(value < 256)
+                                *byte_length = 1;
+                        else
+                                *byte_length = 2;
+
+                        data_status = VALID;
+                }
+        }
+
+        return data_status;
+}

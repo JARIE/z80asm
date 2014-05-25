@@ -9,10 +9,12 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include "udgetopt.h"
 #include "defines.h"
 #include "parse.h"
 #include "task.h"
+#include "assemble.h"
 #include "z80instructionset.h"
 
 int main(int argc, char **argv) {
@@ -33,6 +35,9 @@ int main(int argc, char **argv) {
         uint16_t location_counter = 0;
         char **symbolstracked_list = NULL;
         uint8_t symbolstracked_currentsize = 0, symbolstracked_actualsize = 0;
+
+        FILE *outputfile_handle;
+        char *outputfile_name;
 
         s_flag = err_flag = NOT_SET;
 
@@ -79,7 +84,8 @@ int main(int argc, char **argv) {
                 STDERR("the symbol table could not be created\n");
                 EFAILURE;
         }
-
+        
+#ifdef SYMBOL_DISPLAY
         for(index = 0; index < symboltable_currentsize; ++index) {
                 printf("%s %d %d %d %d %d\n", symboltable_list[index].name,
                        symboltable_list[index].value_type,
@@ -88,11 +94,12 @@ int main(int argc, char **argv) {
                        symboltable_list[index].value[1],
                        symboltable_list[index].value_status);
         }
+#endif
         
-        program_status = PARSE_SOURCEFILE;
+        program_status = CONTINUE_PARSE;
 
         while(extract_nearestword(sourcefile_handle, buffer, 20,
-                                  &line_status) == PARSE_SOURCEFILE) {
+                                  &line_status) == CONTINUE_PARSE) {
 
                 type = parse_wordtype(buffer, instruction_set);
                 
@@ -118,11 +125,11 @@ int main(int argc, char **argv) {
                                          &location_counter, &symboltable_currentsize,
                                          &symboltable_actualsize, &line_status);
                         break;
-#ifdef j
                 case UNKNOWN:
+                        STDERR("invalid symbol encountered\n");
+                        EFAILURE;
                         break;
 
-#endif
                 }
                 goto_nextline(sourcefile_handle, line_status);
         }
@@ -130,9 +137,61 @@ int main(int argc, char **argv) {
         status = validate_symbolstracked(symbolstracked_list, symboltable_list,
                                          symbolstracked_currentsize,
                                          symboltable_currentsize);
-        if(status == ERROR)
+        if(status == ERROR) {
+                free_symboltable(&symboltable_list);
+                free(symbolstracked_list);
                 STDERR("an invalid symbol was found as an operand\n");
+                EFAILURE;
+        }
 
+        rewind(sourcefile_handle);
+
+        program_status = CONTINUE_PARSE;
+        type = UNKNOWN;
+        line_status = NONE_DETECTED;
+
+        outputfile_name = malloc((strlen(sourcefile_name) + 1) *
+                                 sizeof(*outputfile_name));
+        if(outputfile_name == NULL) {
+                free_symboltable(&symboltable_list);
+                free(symbolstracked_list);
+                STDERR("the output file can not be created\n");
+                EFAILURE;
+        }
+
+        index = strlen(sourcefile_name) - 1;
+        printf("%d\n", index);
+        strncpy(outputfile_name, sourcefile_name, index);
+        outputfile_name[index++] = 'o';
+        outputfile_name[index] = '\0';
+
+        printf("output file is %s\n", outputfile_name);
+
+        outputfile_handle = fopen(outputfile_name, "w");
+        if(outputfile_handle == NULL) {
+                free_symboltable(&symboltable_list);
+                free(symbolstracked_list);
+                STDERR("the output file created failed\n");
+                EFAILURE;
+        }
+
+        
+
+        while(extract_nearestword(sourcefile_handle, buffer, 20, &line_status) ==
+              CONTINUE_PARSE) {
+                type = parse_wordtype(buffer, instruction_set);
+
+                if(type == INSTRUCTION) {
+                        assemble_instruction(sourcefile_handle, outputfile_handle,
+                                             buffer, instruction_set,
+                                             symboltable_list, symboltable_currentsize,
+                                             &line_status);
+                }
+
+                goto_nextline(sourcefile_handle, line_status);
+        }
+
+#ifdef SYMBOL_DISPLAY
         for(index = 0; index < symboltable_currentsize; ++index) {
                 printf("%s %d %d %d %d %d\n", symboltable_list[index].name,
                        symboltable_list[index].value_type,
@@ -144,7 +203,10 @@ int main(int argc, char **argv) {
 
         for(index = 0; index < symbolstracked_currentsize; ++index)
                 printf("%s is tracked\n", symbolstracked_list[index]);
+#endif
 
+        fclose(outputfile_handle);
+        free(outputfile_name);
         free_symboltable(&symboltable_list);
         free(symbolstracked_list);
         
