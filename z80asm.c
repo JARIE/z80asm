@@ -38,6 +38,9 @@ int main(int argc, char **argv) {
 
         FILE *outputfile_handle;
         char *outputfile_name;
+        char dir_arg[20];
+        uint16_t current_address, beginning_address;
+        enum address_status_t {NOT_INITIALIZED = 0, INITIALIZED} address_status;
 
         s_flag = err_flag = NOT_SET;
 
@@ -85,17 +88,6 @@ int main(int argc, char **argv) {
                 EFAILURE;
         }
         
-#ifdef SYMBOL_DISPLAY
-        for(index = 0; index < symboltable_currentsize; ++index) {
-                printf("%s %d %d %d %d %d\n", symboltable_list[index].name,
-                       symboltable_list[index].value_type,
-                       symboltable_list[index].value_nbytes,
-                       symboltable_list[index].value[0],
-                       symboltable_list[index].value[1],
-                       symboltable_list[index].value_status);
-        }
-#endif
-        
         program_status = CONTINUE_PARSE;
 
         while(extract_nearestword(sourcefile_handle, buffer, 20,
@@ -112,7 +104,6 @@ int main(int argc, char **argv) {
                                           &symbolstracked_list,
                                           &symbolstracked_currentsize,
                                           &symbolstracked_actualsize);
-                        printf("the location counter value is %d\n", location_counter);
 
                         break;
                 case LABEL:
@@ -150,7 +141,7 @@ int main(int argc, char **argv) {
         type = UNKNOWN;
         line_status = NONE_DETECTED;
 
-        outputfile_name = malloc((strlen(sourcefile_name) + 1) *
+        outputfile_name = malloc((strlen(sourcefile_name) + 3) *
                                  sizeof(*outputfile_name));
         if(outputfile_name == NULL) {
                 free_symboltable(&symboltable_list);
@@ -160,14 +151,13 @@ int main(int argc, char **argv) {
         }
 
         index = strlen(sourcefile_name) - 1;
-        printf("%d\n", index);
         strncpy(outputfile_name, sourcefile_name, index);
-        outputfile_name[index++] = 'o';
+        outputfile_name[index++] = 'h';
+        outputfile_name[index++] = 'e';
+        outputfile_name[index++] = 'x';
         outputfile_name[index] = '\0';
 
-        printf("output file is %s\n", outputfile_name);
-
-        outputfile_handle = fopen(outputfile_name, "w");
+        outputfile_handle = fopen(outputfile_name, "w+");
         if(outputfile_handle == NULL) {
                 free_symboltable(&symboltable_list);
                 free(symbolstracked_list);
@@ -175,36 +165,36 @@ int main(int argc, char **argv) {
                 EFAILURE;
         }
 
+        address_status = NOT_INITIALIZED;
         
-
         while(extract_nearestword(sourcefile_handle, buffer, 20, &line_status) ==
               CONTINUE_PARSE) {
                 type = parse_wordtype(buffer, instruction_set);
 
+                if(type == DIRECTIVE) {
+                        if(!strcmp("ORG", buffer)) {
+                                status = extract_dirarg(sourcefile_handle, 1, &line_status,
+                                                        dir_arg, NULL);
+                                current_address = asciistr_to16bitnum(dir_arg);
+                                if(address_status == NOT_INITIALIZED) {
+                                        beginning_address = current_address;
+                                        address_status = INITIALIZED;
+                                }
+                        }
+                }
                 if(type == INSTRUCTION) {
                         assemble_instruction(sourcefile_handle, outputfile_handle,
                                              buffer, instruction_set,
                                              symboltable_list, symboltable_currentsize,
-                                             &line_status);
+                                             &line_status, &current_address,
+                                             &beginning_address);
                 }
 
                 goto_nextline(sourcefile_handle, line_status);
         }
 
-#ifdef SYMBOL_DISPLAY
-        for(index = 0; index < symboltable_currentsize; ++index) {
-                printf("%s %d %d %d %d %d\n", symboltable_list[index].name,
-                       symboltable_list[index].value_type,
-                       symboltable_list[index].value_nbytes,
-                       symboltable_list[index].value[0],
-                       symboltable_list[index].value[1],
-                       symboltable_list[index].value_status);
-        }
-
-        for(index = 0; index < symbolstracked_currentsize; ++index)
-                printf("%s is tracked\n", symbolstracked_list[index]);
-#endif
-
+        finish_outputhexfile(outputfile_handle);
+ 
         fclose(outputfile_handle);
         free(outputfile_name);
         free_symboltable(&symboltable_list);

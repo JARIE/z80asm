@@ -10,7 +10,8 @@
 void assemble_instruction(FILE *infile_handle, FILE *outfile_handle,  char *instruction,
                           instruction_parameters_t **instruction_set,
                           symboltable_t *symboltable_list,
-                          uint8_t symboltable_currentsize, line_status_t *line_status) {
+                          uint8_t symboltable_currentsize, line_status_t *line_status,
+                          uint16_t *current_address, uint16_t *beginning_address) {
         char operand1[20], operand2[20];
         uint8_t operand1_type, operand2_type;
         uint8_t n_operands;
@@ -46,7 +47,7 @@ void assemble_instruction(FILE *infile_handle, FILE *outfile_handle,  char *inst
 
         assemble(outfile_handle, instruction_set, instruction, operand1_type,
                  operand2_type, operand1_valuelength, operand2_valuelength, operand1_value,
-                 operand2_value);
+                 operand2_value, current_address, beginning_address);
 }
 
 
@@ -111,11 +112,12 @@ int index, i;
         }
 }
 
-void assemble(FILE *outfile_handle, instruction_parameters_t **instruction_set,
+void assemble(FILE *outputfile_handle, instruction_parameters_t **instruction_set,
               char *instruction,
               uint8_t operand1_type, uint8_t operand2_type, uint8_t operand1_valuelength,
               uint8_t operand2_valuelength, uint8_t operand1_value[],
-              uint8_t operand2_value[]) {
+              uint8_t operand2_value[], uint16_t *current_address,
+              uint16_t *beginning_address) {
         int index1, index2, i;
         loop_status_t loop_status = CONTINUE;
         uint8_t instruction_length;
@@ -256,8 +258,89 @@ void assemble(FILE *outfile_handle, instruction_parameters_t **instruction_set,
                 }
         }
 
-        for(i = 0; i < instruction_length; ++i) {
-                printf("%#4x\n", value[i]);
+        output_tofile(outputfile_handle, instruction_length, value, current_address,
+                      beginning_address);
+}
+
+static fpos_t addressfield_filepos;
+static fpos_t original_filepos;
+static fpos_t bytecountfield_filepos;
+static uint8_t nbytes_oncurrentline;
+
+void output_tofile(FILE *outputfile_handle, uint8_t instruction_length, uint8_t value[],
+                   uint16_t *current_address, uint16_t *beginning_address) {
+        uint16_t threshold;
+        uint8_t lval;
+        int index;
+
+        threshold = *beginning_address + 16;
+
+        if(*current_address == *beginning_address) {
+                fputc(':', outputfile_handle);
+                fgetpos(outputfile_handle, &bytecountfield_filepos);
+                fputs("  ", outputfile_handle);
+                lval = (uint8_t) (*current_address >> 8);
+                put8bitval_inhex(outputfile_handle, lval);
+                lval = (uint8_t) *current_address;
+                put8bitval_inhex(outputfile_handle, lval);
+                fputs("00", outputfile_handle);
+                nbytes_oncurrentline = 0;
+        }
+
+        for(index = 0; index < instruction_length; ++index) {
+                if(*current_address >= *beginning_address &&
+                   *current_address < threshold) {
+                        put8bitval_inhex(outputfile_handle, value[index]);
+                        ++(*current_address);
+                        ++nbytes_oncurrentline;
+                }
+                else {
+                        *beginning_address = *current_address;
+                        threshold = *beginning_address + 16;
+                        fgetpos(outputfile_handle, &original_filepos);
+                        fsetpos(outputfile_handle, &bytecountfield_filepos);
+                        put8bitval_inhex(outputfile_handle, nbytes_oncurrentline);
+                        fsetpos(outputfile_handle, &original_filepos);
+                        checksum(outputfile_handle);
+                        fputs("\r\n:", outputfile_handle);
+                        fgetpos(outputfile_handle, &bytecountfield_filepos);
+                        fputs("  ", outputfile_handle);
+                        lval = (uint8_t) (*current_address >> 8);
+                        put8bitval_inhex(outputfile_handle, lval);
+                        lval = (uint8_t) *current_address;
+                        put8bitval_inhex(outputfile_handle, lval);
+                        fputs("00", outputfile_handle);
+                        nbytes_oncurrentline = 0;
+                        put8bitval_inhex(outputfile_handle, value[index]);
+                        ++(*current_address);
+                        ++nbytes_oncurrentline;
+                }
         }
 }
- 
+
+void checksum(FILE *outputfile_handle) {
+        int index;
+        char c[3];
+        uint8_t value = 0, checksum, temp;
+
+        fsetpos(outputfile_handle, &bytecountfield_filepos);
+        for(index = bytecountfield_filepos; index < original_filepos; ++index) {
+                c[0] = fgetc(outputfile_handle);
+                ++index;
+                c[1] = fgetc(outputfile_handle);
+                c[2] = '\0';
+                value += hexstr_todecnum(c);
+        }
+        checksum = value ^ 0xFF;
+        checksum += 1;
+        fsetpos(outputfile_handle, &original_filepos);
+        put8bitval_inhex(outputfile_handle, checksum);
+}
+
+void finish_outputhexfile(FILE *outputfile_handle) {
+        fgetpos(outputfile_handle, &original_filepos);
+        fsetpos(outputfile_handle, &bytecountfield_filepos);
+        put8bitval_inhex(outputfile_handle, nbytes_oncurrentline);
+        fsetpos(outputfile_handle, &original_filepos);
+        checksum(outputfile_handle);
+}

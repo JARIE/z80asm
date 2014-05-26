@@ -63,8 +63,6 @@ void parse_instruction(FILE *file_handle, char *buffer,
                                                  operand1_type, operand2_type,
                                                  &mainindex, &subindex);
 
-        printf("%d %d\n", operand1_type, operand2_type);
-
         if(data_status != VALID) {
                 STDERR("invalid operands detected");
                 EFAILURE;

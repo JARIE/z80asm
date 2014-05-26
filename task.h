@@ -33,4 +33,8 @@ void extract_operands(FILE *file_handle, char *operand1, char *operand2,
 
 data_status_t testif_numvalid(char *operand, uint8_t *byte_length);
 
+void put8bitval_inhex(FILE *outputfile_handle, uint8_t value);
+
+uint8_t hexstr_todecnum(char *hexliteral);
+
 #endif

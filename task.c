@@ -426,3 +426,43 @@ data_status_t testif_numvalid(char *buffer, uint8_t *byte_length) {
 
         return data_status;
 }
+
+void put8bitval_inhex(FILE *outputfile_handle, uint8_t value) {
+        uint8_t lval;
+        char c;
+
+        lval = (value >> 4);
+        if(lval >= 10)
+                c = lval + 55;
+        else
+                c = lval + 48;
+
+        fputc(c, outputfile_handle);
+
+        lval = value & 0x0F;
+        if(lval >= 10)
+                c = lval + 55;
+        else
+                c = lval + 48;
+
+        fputc(c, outputfile_handle);
+}
+
+uint8_t hexstr_todecnum(char *hexliteral) {
+        uint8_t value;
+
+        if(hexliteral[1] >= 'A' && hexliteral[1] <= 'F') 
+                value = (hexliteral[1] - 55);
+
+        else 
+                value = (hexliteral[1] - 48);
+
+
+        if(hexliteral[0] >= 'A' && hexliteral[0] <= 'F') 
+                value |= ((hexliteral[0] - 55) << 4);
+
+        else 
+                value |= ((hexliteral[0] - 48) << 4);
+
+        return value;
+}
