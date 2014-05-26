@@ -16,10 +16,10 @@
 void init_symboltable(symboltable_t **symboltable_list, symboltable_t *defined_symbols,
                      uint8_t *symboltable_currentsize, uint8_t *symboltable_actualsize) {
         int index = 0;
-        *symboltable_list = malloc(25 * sizeof(**symboltable_list));
+        *symboltable_list = malloc(30 * sizeof(**symboltable_list));
 
         *symboltable_currentsize = 0;
-        *symboltable_actualsize = 25;
+        *symboltable_actualsize = 30;
 
         if(*symboltable_list != NULL) {
                 while(defined_symbols[index].name != NULL) {

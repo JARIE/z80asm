@@ -582,6 +582,8 @@ symboltable_t z80_symbols[] = {
         {"$PE", CONDITION, 1, {5, NA}, DEFINED},
         {"$P", CONDITION, 1, {6, NA}, DEFINED},
         {"$M", CONDITION, 1, {7, NA}, DEFINED},
+        {"IX", IX_REGISTER, 0, {NA, NA}, DEFINED},
+        {"IY", IY_REGISTER, 0, {NA, NA}, DEFINED},
         {NULL, 0, 0, 0}
 };
 

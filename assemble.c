@@ -217,7 +217,7 @@ void assemble(FILE *outputfile_handle, instruction_parameters_t **instruction_se
                                 nshift = 0x07 &
                                         instruction_set[index1][index2].binary_code[i];
                                 value[i] = (lval << nshift) |
-                                      instruction_set[index1][index1].instruction_value[i];
+                                        instruction_set[index1][index2].instruction_value[i];
                                 break;
                         case _3BITS:
                                 lval = operand2_value[0] & 0x07;
@@ -237,18 +237,17 @@ void assemble(FILE *outputfile_handle, instruction_parameters_t **instruction_se
                                         instruction_set[index1][index2].binary_code[i];
                                 switch(value_atinterest) {
                                 case OP1_OP2:
-                                        lval = operand1_value[0] & 0x03;
+                                        lval = operand1_value[0] & 0x07;
                                         value[i] = (lval << 3) |
                                                 instruction_set[index1][index2].instruction_value[i];
-                                        lval = operand2_value[0] & 0x03;
+                                        lval = operand2_value[0] & 0x07;
                                         value[i] |= lval;
-                                                
                                         break;
                                 case OP2_OP1:
-                                        lval = operand2_value[0] & 0x03;
+                                        lval = operand2_value[0] & 0x07;
                                         value[i] = (lval << 3) |
                                                 instruction_set[index1][index2].instruction_value[i];
-                                        lval = operand1_value[0] & 0x03;
+                                        lval = operand1_value[0] & 0x07;
                                         value[i] |= lval;
                                         break;
                                 }
