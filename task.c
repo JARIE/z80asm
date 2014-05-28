@@ -15,11 +15,18 @@
 
 void init_symboltable(symboltable_t **symboltable_list, symboltable_t *defined_symbols,
                      uint8_t *symboltable_currentsize, uint8_t *symboltable_actualsize) {
-        int index = 0;
-        *symboltable_list = malloc(30 * sizeof(**symboltable_list));
+        int index = 0, size = 0;
+        
+        while(defined_symbols[index].name != NULL) {
+                ++size;
+                ++index;
+        }
+
+        index = 0;
+        *symboltable_list = malloc(size * sizeof(**symboltable_list));
 
         *symboltable_currentsize = 0;
-        *symboltable_actualsize = 30;
+        *symboltable_actualsize = size;
 
         if(*symboltable_list != NULL) {
                 while(defined_symbols[index].name != NULL) {
@@ -280,6 +287,8 @@ void extract_operands(FILE *file_handle, char *operand1, char *operand2,
         int c, index;
         char buffer[20];
 
+        /* Find the nearest non-whitespace character to determine from what location to
+           start the extraction. */
         do {
                 c = fgetc(file_handle);
         } while(c != EOF && (c == ' ' || c == '\t'));
@@ -298,6 +307,10 @@ void extract_operands(FILE *file_handle, char *operand1, char *operand2,
         }
         else {
                 index = 0;
+                /* Once the first non-whitespace character is found, then store it in a
+                   buffer to be later analyzed. Gather all characters up until either a
+                   whitespace character, end of file indicator, carriage return, newline,
+                   or comment delimiter is encountered. */
                 do {
                         buffer[index++] = c;
                         c = fgetc(file_handle);
@@ -305,6 +318,32 @@ void extract_operands(FILE *file_handle, char *operand1, char *operand2,
                         c != ';');
                 buffer[index] = '\0';
 
+// development start area
+                if(!strcmp(buffer, "(IX") || !strcmp(buffer, "(IY") ||
+                   !strcmp(buffer, "(IX+") || !strcmp(buffer, "(IY+")) {
+                        if(c == ' ' || c == '\t')
+                                        buffer[index++] = c;
+                        do {
+                                c = fgetc(file_handle);
+                                if(c != EOF && c != '\n' && c != '\r' && c != ';') 
+                                        buffer[index++] = c;
+                        } while(c != EOF && c != '\n' && c != '\r' && c != ';' &&
+                                c != ')');
+                        buffer[index] = '\0';
+
+                        if(c == ')') {
+                                do {
+                                        c = fgetc(file_handle);
+                                        if(c != EOF && c != '\n' && c != '\r' &&
+                                           c != ';' && c != ' ' && c != '\t')
+                                                buffer[index++] = c;
+                                } while(c != EOF && c != '\n' && c != '\r' &&
+                                        c != ';' && c != ' ' && c != '\t');
+                                buffer[index] = '\0';
+                        }
+                }
+                
+// devlopment end area
                 *n_operands = 1;
 
                 if(c == EOF)
@@ -323,6 +362,10 @@ void extract_operands(FILE *file_handle, char *operand1, char *operand2,
 
         index = strlen(buffer) - 1;
 
+        /* Determine whether a comma exists at the end of the characters previously
+           extracted. If the comma exists, then this means that 2 operands are being
+           supplied and that the second operand must also be extracted as the same way as
+           before. */
         if(*line_status == NONE_DETECTED && buffer[index] == ',') {
                 operand1[index] = '\0';
                 
@@ -347,6 +390,22 @@ void extract_operands(FILE *file_handle, char *operand1, char *operand2,
                                 c != '\r' && c != ';');
                         buffer[index] = '\0';
 
+// development start area
+                        if(!strcmp(buffer, "(IX") || !strcmp(buffer, "(IY") ||
+                           !strcmp(buffer, "(IX+") || !strcmp(buffer, "(IY+")) {
+                                if(c == ' ' || c == '\t')
+                                        buffer[index++] = c;
+                                do {
+                                        c = fgetc(file_handle);
+                                        if(c != EOF && c != '\n' && c != '\r' && c != ';') 
+                                                buffer[index++] = c;
+                                } while(c != EOF && c != '\n' && c != '\r' && c != ';' &&
+                                        c != ')');
+                                buffer[index] = '\0';
+                        }
+                
+// devlopment end area
+                        
                         ++(*n_operands);
 
                         strcpy(operand2, buffer);
@@ -370,8 +429,13 @@ data_status_t testif_numvalid(char *buffer, uint8_t *byte_length) {
         int index, boundary;
         uint16_t value = 0;
         uint8_t exponent;
+        uint8_t multiplicand;
 
         index = strlen(buffer) - 1;
+
+        if(strlen(buffer) == 1 && (buffer[index] == 'H' || buffer[index] == 'h')) {
+                return INVALID;
+        }
 
         data_status = VALID;
 
@@ -388,7 +452,12 @@ data_status_t testif_numvalid(char *buffer, uint8_t *byte_length) {
                         boundary = 0;
                         exponent = 0;
                         for(; index >= boundary; --index) {
-                                value += (buffer[index] - 48) * pow(16, exponent);
+                                if((buffer[index] >= 'A' && buffer[index] <= 'F') ||
+                                   (buffer[index] >= 'a' && buffer[index] <= 'f'))
+                                        multiplicand = buffer[index] - 55;
+                                else
+                                        multiplicand = buffer[index] - 48;
+                                value += multiplicand * pow(16, exponent);
                                 ++exponent;
                         }
 

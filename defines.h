@@ -48,7 +48,7 @@
 #define SHIFT_7X 0X07
 
 #define BIT  1
-#define C_REGISTER  2
+#define C_REGISTER_MEMREF  2
 #define VALUE_8_BIT 3
 #define REGISTER_8_BIT 4
 #define ACCUMULATOR 5
@@ -73,6 +73,12 @@
 #define ZERO_SET 23
 #define ZERO_NOTSET 24
 #define NONE 25
+#define AF_REGISTER 30
+#define BC_REGISTER_MEMREF 31
+#define DE_REGISTER_MEMREF 32
+#define HL_REGISTER_MEMREF 33
+#define SP_REGISTER_MEMREF 35
+#define _AF_REGISTER 34
 #define INVALID_TYPE 255
 
 #define UNDEFINED 0

@@ -73,4 +73,6 @@ void get_symbolparams(char *symbol, symboltable_t *symboltable_list,
                       uint8_t symboltable_currentsize,
                       uint8_t *byte_length, uint8_t value[]);
 
+data_status_t testif_indexregwoffset(char *operand, uint8_t *operand_type);
+
 #endif

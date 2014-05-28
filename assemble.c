@@ -11,13 +11,14 @@ void assemble_instruction(FILE *infile_handle, FILE *outfile_handle,  char *inst
                           instruction_parameters_t **instruction_set,
                           symboltable_t *symboltable_list,
                           uint8_t symboltable_currentsize, line_status_t *line_status,
-                          uint16_t *current_address, uint16_t *beginning_address) {
+                          uint16_t *current_address, uint16_t *beginning_address,
+                          uint16_t *previous_address) {
         char operand1[20], operand2[20];
         uint8_t operand1_type, operand2_type;
         uint8_t n_operands;
         uint8_t operand1_valuelength, operand2_valuelength,
                 operand1_value[2], operand2_value[2];
-        
+
         extract_operands(infile_handle, operand1, operand2, line_status, &n_operands);
 
         if(n_operands == 0) {
@@ -47,31 +48,84 @@ void assemble_instruction(FILE *infile_handle, FILE *outfile_handle,  char *inst
 
         assemble(outfile_handle, instruction_set, instruction, operand1_type,
                  operand2_type, operand1_valuelength, operand2_valuelength, operand1_value,
-                 operand2_value, current_address, beginning_address);
+                 operand2_value, current_address, beginning_address, previous_address);
 }
 
 
 void retrieve_opcharac(char *operand, uint8_t *operand_type, uint8_t *operand_valuelength,
                        uint8_t operand_value[], symboltable_t *symboltable_list,
                        uint8_t symboltable_currentsize) {
-int index, i;
+        int index, i, boundary, index2;
         uint8_t value_toconvert[20];
         enum operand_status_t {UNKNOWN = 0, DETERMINED} operand_status;
         uint8_t byte_length;
-        data_status_t data_status;
+        data_status_t data_status, memory_status, indexreg_status;
 
         operand_status = UNKNOWN;
         
         index = strlen(operand) - 1;
-        
-        if(operand[0] == '(' && operand[index] == ')') {
-                *operand_type = MEMORY_16_BIT;
-                for(index = 1; index < (strlen(operand) - 1); ++index)
-                        value_toconvert[index] = operand[index];
-                *operand_valuelength = 2;
-                operand_value[0] = (uint8_t) asciistr_to16bitnum(value_toconvert);
-                operand_value[1] = (uint8_t) (asciistr_to16bitnum(value_toconvert) >> 8);
+
+        if(!strcmp(operand, "(BC)") || !strcmp(operand, "(DE)") ||
+           !strcmp(operand, "(HL)") || !strcmp(operand, "(SP)") ||
+           !strcmp(operand, "(C)")) {
+                if(!strcmp(operand, "(BC)"))
+                        *operand_type = BC_REGISTER_MEMREF;
+                else if(!strcmp(operand, "(DE)"))
+                        *operand_type = DE_REGISTER_MEMREF;
+                else if(!strcmp(operand, "(HL)"))
+                        *operand_type = HL_REGISTER_MEMREF;
+                else if(!strcmp(operand, "(SP)"))
+                        *operand_type = SP_REGISTER_MEMREF;
+                else
+                        *operand_type = C_REGISTER_MEMREF;
                 operand_status = DETERMINED;
+        }
+        
+        if(operand[0] == '(' && operand[index] == ')' && operand_status == UNKNOWN) {
+                if(operand[index - 1] == 'H' || operand[index - 1] == 'h')
+                        boundary = index - 1;
+                else
+                        boundary = index;
+                memory_status = VALID;
+                for(index = 1; index < boundary; ++index) {
+                        if((operand[index] < '0' || operand[index] > '9') &&
+                           (operand[index] < 'A' || operand[index] > 'F') &&
+                           (operand[index] < 'a' || operand[index] > 'f'))
+                                memory_status = INVALID;
+                }
+                if(memory_status == VALID) {
+                        *operand_type = MEMORY_16_BIT;
+                        for(index = 1; index < (strlen(operand) - 1); ++index)
+                                value_toconvert[index - 1] = operand[index];
+                        value_toconvert[index - 1] = '\0';
+                        *operand_valuelength = 2;
+                        operand_value[0] = (uint8_t)
+                                asciistr_to16bitnum(value_toconvert);
+                        operand_value[1] = (uint8_t)
+                                (asciistr_to16bitnum(value_toconvert) >> 8);
+                        operand_status = DETERMINED;
+                }
+                else {
+                        indexreg_status = testif_indexregwoffset(operand, operand_type);
+                        if(indexreg_status == VALID) {
+                                *operand_valuelength = 1;
+                                index = 0;
+                                while((operand[index] < '0' || operand[index] > '9') &&
+                                      (operand[index] < 'A' || operand[index] > 'F') &&
+                                      (operand[index] < 'a' || operand[index] > 'f'))
+                                        ++index;
+                                index2 = 0;
+                                do {
+                                        value_toconvert[index2++] = operand[index++];
+                                } while(operand[index] != ')' && operand[index] != ' ' &&
+                                        operand[index] != '\t');
+                                value_toconvert[index2] = '\0';
+                                operand_value[0] = (uint8_t)
+                                        asciistr_to16bitnum(value_toconvert);
+                                operand_status = DETERMINED;
+                        }
+                }
+               
         }
 
         if(operand_status == UNKNOWN) {
@@ -117,7 +171,7 @@ void assemble(FILE *outputfile_handle, instruction_parameters_t **instruction_se
               uint8_t operand1_type, uint8_t operand2_type, uint8_t operand1_valuelength,
               uint8_t operand2_valuelength, uint8_t operand1_value[],
               uint8_t operand2_value[], uint16_t *current_address,
-              uint16_t *beginning_address) {
+              uint16_t *beginning_address, uint16_t *previous_address) {
         int index1, index2, i;
         loop_status_t loop_status = CONTINUE;
         uint8_t instruction_length;
@@ -176,7 +230,7 @@ void assemble(FILE *outputfile_handle, instruction_parameters_t **instruction_se
                                 nshift = 0x07 &
                                         instruction_set[index1][index2].binary_code[i];
                                 value[i] = (lval << nshift) |
-                                    instruction_set[index1][index1].instruction_value[i];
+                                    instruction_set[index1][index2].instruction_value[i];
                                 break;
                         case _3BITS:
                                 lval = operand1_value[0] & 0x07;
@@ -258,7 +312,7 @@ void assemble(FILE *outputfile_handle, instruction_parameters_t **instruction_se
         }
 
         output_tofile(outputfile_handle, instruction_length, value, current_address,
-                      beginning_address);
+                      beginning_address, previous_address);
 }
 
 static fpos_t addressfield_filepos;
@@ -267,7 +321,8 @@ static fpos_t bytecountfield_filepos;
 static uint8_t nbytes_oncurrentline;
 
 void output_tofile(FILE *outputfile_handle, uint8_t instruction_length, uint8_t value[],
-                   uint16_t *current_address, uint16_t *beginning_address) {
+                   uint16_t *current_address, uint16_t *beginning_address,
+                   uint16_t *previous_address) {
         uint16_t threshold;
         uint8_t lval;
         int index;
@@ -288,8 +343,11 @@ void output_tofile(FILE *outputfile_handle, uint8_t instruction_length, uint8_t 
 
         for(index = 0; index < instruction_length; ++index) {
                 if(*current_address >= *beginning_address &&
-                   *current_address < threshold) {
+                   *current_address < threshold &&
+                   (*previous_address == *current_address ||
+                    *previous_address == (*current_address - 1))) {
                         put8bitval_inhex(outputfile_handle, value[index]);
+                        *previous_address = *current_address;
                         ++(*current_address);
                         ++nbytes_oncurrentline;
                 }
@@ -311,6 +369,7 @@ void output_tofile(FILE *outputfile_handle, uint8_t instruction_length, uint8_t 
                         fputs("00", outputfile_handle);
                         nbytes_oncurrentline = 0;
                         put8bitval_inhex(outputfile_handle, value[index]);
+                        *previous_address = *current_address;
                         ++(*current_address);
                         ++nbytes_oncurrentline;
                 }

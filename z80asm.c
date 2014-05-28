@@ -39,7 +39,7 @@ int main(int argc, char **argv) {
         FILE *outputfile_handle;
         char *outputfile_name;
         char dir_arg[20];
-        uint16_t current_address, beginning_address;
+        uint16_t current_address = 0, beginning_address = 0, previous_address = 0;
         enum address_status_t {NOT_INITIALIZED = 0, INITIALIZED} address_status;
 
         s_flag = err_flag = NOT_SET;
@@ -177,6 +177,7 @@ int main(int argc, char **argv) {
                                                         dir_arg, NULL);
                                 current_address = asciistr_to16bitnum(dir_arg);
                                 if(address_status == NOT_INITIALIZED) {
+                                        previous_address = current_address;
                                         beginning_address = current_address;
                                         address_status = INITIALIZED;
                                 }
@@ -187,7 +188,7 @@ int main(int argc, char **argv) {
                                              buffer, instruction_set,
                                              symboltable_list, symboltable_currentsize,
                                              &line_status, &current_address,
-                                             &beginning_address);
+                                             &beginning_address, &previous_address);
                 }
 
                 goto_nextline(sourcefile_handle, line_status);

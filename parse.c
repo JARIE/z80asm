@@ -5,7 +5,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
-#include "string.h"
+#include <string.h>
 #include "defines.h"
 #include "parse.h"
 
@@ -93,8 +93,12 @@ uint8_t parse_operandtype(char *operand, symboltable_t **symboltable_list,
 
                 if(data_status == VALID)
                         operand_type = MEMORY_16_BIT;
-                else
-                        operand_type = INVALID_TYPE;
+                else {
+                        data_status = testif_indexregwoffset(operand, &operand_type);
+
+                        if(data_status == INVALID) 
+                                operand_type = NONE;
+                }
         }
 
         if(operand_type == NONE) {
@@ -105,6 +109,7 @@ uint8_t parse_operandtype(char *operand, symboltable_t **symboltable_list,
                                 operand_type = VALUE_8_BIT;
                         else
                                 operand_type = VALUE_16_BIT;
+
         }
 
         if(operand_type == NONE) {
@@ -144,18 +149,26 @@ data_status_t testif_memlocvalid(char* operand) {
         data_status_t data_status;
         int index, boundary;
 
-        index = strlen(operand) - 2;
-        if(operand[index] == 'H' || operand[index] == 'h') 
-                boundary = strlen(operand) - 2;
-        else
-                boundary = strlen(operand) - 1;
-        
         data_status = VALIDITY_UNKNOWN;
+        
+        index = strlen(operand) - 2;
+        if(operand[index] == 'H' || operand[index] == 'h') {
+                boundary = strlen(operand) - 2;
+                
+                for(index = 1; index < boundary; ++index)
+                        if((operand[index] < '0' || operand[index] > '9') &&
+                           (operand[index] < 'A' || operand[index] > 'F') &&
+                           (operand[index] < 'a' || operand[index] > 'f'))
+                                data_status = INVALID;
+        }
+        else {
+                boundary = strlen(operand) - 1;
 
-        for(index = 1; index < boundary; ++index)
-                if(operand[index] < '0' || operand[index] > '9')
-                        data_status = INVALID;
-
+                for(index = 1; index < boundary; ++index)
+                        if((operand[index] < '0' || operand[index] > '9'))
+                                data_status = INVALID;
+        }
+        
         if(data_status == VALIDITY_UNKNOWN)
                 data_status = VALID;
         
@@ -305,7 +318,8 @@ void handle_directive(FILE *file_handle, char *directive, symboltable_t **symbol
                                 index = 1;
                                 boundary = strlen(dir_arg2) - 1;
                                 for(; index < boundary; ++index)
-                                        value_toconvert[index] = dir_arg2[index];
+                                        value_toconvert[index - 1] = dir_arg2[index];
+                                value_toconvert[index - 1] = '\0';
                                 value[0] = (uint8_t) asciistr_to16bitnum(value_toconvert);
                                 value[1] = (uint8_t)
                                         (asciistr_to16bitnum(value_toconvert) >> 8);
@@ -535,3 +549,72 @@ void get_symbolparams(char *symbol, symboltable_t *symboltable_list,
         }
 }
 
+
+data_status_t testif_indexregwoffset(char *operand, uint8_t *operand_type) {
+        int index, boundary, index2;
+        char buffer[10];
+        enum indexreg_type_t {NO_INDEXREG = 0, IX, IY} indexreg_type;
+        data_status_t data_status;
+
+        index = 1;
+        boundary = strlen(operand) - 1;
+        index2 = 0;
+
+        while(operand[index] >= 'A' && operand[index] <= 'Z') {
+                buffer[index2] = operand[index];
+                ++index;
+                ++index2;
+        }
+        buffer[index2] = '\0';
+
+        if(!strcmp(buffer, "IX"))
+                indexreg_type = IX;
+        else if(!strcmp(buffer, "IY"))
+                indexreg_type = IY;
+        else indexreg_type = NO_INDEXREG;
+
+        if(indexreg_type != NO_INDEXREG) {
+                while(operand[index] == ' ' || operand[index] == '\t')
+                        ++index;
+                if(operand[index] == '+') {
+                        ++index;
+                        while(operand[index] == ' ' || operand[index] == '\t')
+                                ++index;
+                        index2 = 0;
+
+                        while(operand[index] != ')') {
+                                buffer[index2] = operand[index];
+                                ++index2;
+                                ++index;
+                        }
+
+                        data_status = VALID;
+
+                        if(buffer[index2 - 1] == 'H' || buffer[index2 - 1] == 'h')
+                                index2 = index2 - 1;
+                        
+                        for(index = 0; index < index2; ++index) {
+                                if((buffer[index] < '0' || buffer[index] > '9') &&
+                                   (buffer[index] < 'A' || buffer[index] > 'F') &&
+                                   (buffer[index] < 'a' || buffer[index] > 'f'))
+                                        data_status = INVALID;
+                        }
+
+                        if(data_status == VALID) {
+                                if(indexreg_type == IX)
+                                        *operand_type = IX_REGISTER_WOFFSET;
+                                else {
+                                        *operand_type = IY_REGISTER_WOFFSET;
+                                }
+                                
+                        }
+                }
+                else
+                        data_status = INVALID;
+                
+        }
+        else
+                data_status = INVALID;
+
+        return data_status;
+}
