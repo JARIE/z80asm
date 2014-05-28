@@ -401,4 +401,5 @@ void finish_outputhexfile(FILE *outputfile_handle) {
         put8bitval_inhex(outputfile_handle, nbytes_oncurrentline);
         fsetpos(outputfile_handle, &original_filepos);
         checksum(outputfile_handle);
+        fputs("\r\n:00000001FF", outputfile_handle);
 }
