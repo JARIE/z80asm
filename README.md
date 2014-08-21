@@ -13,6 +13,6 @@ z80asm
 
   to execute *z80asm*:
 
-    '''z80asm -[s] <assembly source file>'''
+    'z80asm -[s] <assembly source file>'
 
 
