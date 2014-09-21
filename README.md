@@ -16,3 +16,7 @@ z80asm
     `z80asm -[s] <assembly source file>`
 
 
+Instructions not supported:
+  - RST p
+
+
